@@ -31,7 +31,7 @@ El presente documento constituye la **Especificación de Requisitos de Software 
 2. **Ciclo de Vida de Órdenes de Trabajo (Work Orders):** Tablero interactivo (Kanban) y vista tabular con trazabilidad por estados (`PENDIENTE`, `EN_PROCESO`, `ESPERANDO_REPUESTOS`, `LISTO`, `ENTREGADO`).
 3. **Facturación Electrónica y Comprobantes de Pago (SUNAT / Perú):** Emisión formal de Facturas (`F001-XXXX`) y Boletas de Venta (`B001-XXXX`) con cálculo automático de Base Imponible, IGV (18%), y plantilla de impresión directa para formato A4 y tickets térmicos de 80 mm con membrete del taller.
 4. **Control de Almacén y Kardex de Repuestos:** Inventario con control de existencias, cálculo de márgenes, alertas de stock mínimo y deducción transaccional automática al facturar o despachar en órdenes.
-5. **Historial Clínico Automotriz y Gestión de Flota:** Registro histórico de intervenciones, kilometrajes y repuestos consumidos indexados por número de placa vehicular y documento del propietario (DNI/RUC).
+5. **Historial Clínico Automotriz y Gestión de Carros:** Registro histórico de intervenciones, kilometrajes y repuestos consumidos indexados por número de placa vehicular y documento del propietario (DNI/RUC).
 6. **Integración con Canales de Mensajería (WhatsApp):** Notificaciones con enlaces profundos (`wa.me`) preformateados para envío de presupuestos, cambios de estado y avisos de entrega del vehículo.
 7. **Acceso Exclusivo de Cuenta Única a Medida:** Inicio de sesión protegido y estación de trabajo monousuario para el operador titular (`Timoteo Pariona`), evitando complejidades de gestión multi-usuario innecesarias.
 8. **Distribución Portable en Archivo Único (`ElectromecanicaLince.exe`):** Empaquetado de escritorio Windows 100% autocontenido (con servidor Next.js Standalone, runtime Chromium/Electron, tabla ICU y base de datos SQLite embebidos), operable en cualquier PC sin requerir instalación de Node.js ni conexión a internet.
@@ -114,7 +114,7 @@ Este documento está dirigido a:
 3. **Motor de Voz Inteligente:** Conversión de habla desestructurada a estructuras JSON tipadas con extracción automática de placas vehiculares, kilometrajes numéricos y repuestos.
 4. **Módulo Fiscal y Facturación:** Emisión de comprobantes autorizados con cálculos matemáticos precisos (subtotal, base imponible, IGV redondeado a 2 decimales).
 5. **Almacén y Kardex:** Monitoreo visual de stocks críticos con código de color ámbar/rojo y actualización atómica al emitir servicios.
-6. **Directorio y Flota:** Trazabilidad integral de clientes particulares y corporativos con múltiples vehículos asociados.
+6. **Directorio de Clientes y Carros:** Trazabilidad integral de clientes particulares y corporativos con múltiples vehículos asociados.
 7. **Paleta de Navegación Rápida:** Acceso global vía `Ctrl + K` para cambiar de pantalla, registrar órdenes o buscar clientes en menos de 200 ms.
 8. **Persistencia Local Desconectada:** Capacidad de operar 100% offline sin pérdida de datos ni dependencias de internet.
 
@@ -376,9 +376,10 @@ erDiagram
 
 ---
 
-### RF-05: Gestión de Clientes y Flota Vehicular
+### RF-05: Gestión de Clientes y Carros (Relación 1 a N)
 - **RF-05.1 Directorio Centralizado:** Registro de clientes con Nombre/Razón Social, Teléfono móvil, Documento de identidad (DNI/RUC), Correo y Dirección fiscal.
-- **RF-05.2 Flota Vehicular Asociada (Relación 1 a N):** Un cliente puede poseer múltiples vehículos registrados (autos particulares, camionetas, flotas de transporte).
+- **RF-05.2 Múltiples Carros por Titular (Relación 1 a N):** Un cliente puede registrar y gestionar múltiples carros bajo su mismo nombre (autos familiares, camionetas o vehículos comerciales).
+- **RF-05.5 Edición Independiente de Clientes y Carros:** Capacidad de editar los datos personales del cliente (nombre, teléfono/WhatsApp, documento DNI/RUC, email, notas) y gestionar de forma individual cada vehículo (editar placa, marca, modelo, año, kilometraje o agregar un nuevo carro a un cliente existente con un clic).
 - **RF-05.3 Historial Clínico Automotriz por Placa:**
   - Visualización cronológica de todas las intervenciones realizadas al vehículo.
   - Registro de variación de odómetro (kilometraje) entre visitas.

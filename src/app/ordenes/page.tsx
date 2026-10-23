@@ -14,6 +14,7 @@ function OrdersContent() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderToEdit, setOrderToEdit] = useState<any>(null);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
 
@@ -39,9 +40,21 @@ function OrdersContent() {
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'new' || action === 'new_from_voice') {
+      setOrderToEdit(null);
       setOrderModalOpen(true);
     }
   }, [searchParams]);
+
+  const handleEditOrder = (order: any) => {
+    setSelectedOrder(null);
+    setOrderToEdit(order);
+    setOrderModalOpen(true);
+  };
+
+  const handleOpenNewOrder = () => {
+    setOrderToEdit(null);
+    setOrderModalOpen(true);
+  };
 
   const totalAmount = orders.reduce((acc, o) => acc + Number(o.totalAmount || 0), 0);
   const activeCount = orders.filter((o) =>
@@ -70,7 +83,7 @@ function OrdersContent() {
           </button>
 
           <button
-            onClick={() => setOrderModalOpen(true)}
+            onClick={handleOpenNewOrder}
             className="btn btn-primary"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -88,6 +101,7 @@ function OrdersContent() {
         <OrderKanban
           orders={orders}
           onSelectOrder={(order) => setSelectedOrder(order)}
+          onEditOrder={handleEditOrder}
         />
       )}
 
@@ -101,12 +115,17 @@ function OrdersContent() {
             fetchOrders();
             setSelectedOrder(null);
           }}
+          onEditOrder={handleEditOrder}
         />
       )}
 
       <OrderFormModal
+        orderToEdit={orderToEdit}
         isOpen={orderModalOpen}
-        onClose={() => setOrderModalOpen(false)}
+        onClose={() => {
+          setOrderModalOpen(false);
+          setOrderToEdit(null);
+        }}
         onOrderSaved={() => {
           fetchOrders();
         }}

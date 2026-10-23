@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, Search, Eye } from 'lucide-react';
+import { Share2, Search, Eye, Edit2 } from 'lucide-react';
 import {
   formatCurrency,
   formatPlate,
@@ -12,6 +12,7 @@ import {
 interface OrderKanbanProps {
   orders: any[];
   onSelectOrder: (order: any) => void;
+  onEditOrder?: (order: any) => void;
 }
 
 const COLUMNS = [
@@ -22,7 +23,11 @@ const COLUMNS = [
   { id: 'ENTREGADO', title: 'Entregado', tone: '' },
 ];
 
-export function OrderKanban({ orders, onSelectOrder }: OrderKanbanProps) {
+export function OrderKanban({
+  orders,
+  onSelectOrder,
+  onEditOrder,
+}: OrderKanbanProps) {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('TODOS');
@@ -251,6 +256,17 @@ export function OrderKanban({ orders, onSelectOrder }: OrderKanbanProps) {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="inline-flex items-center justify-end gap-1.5">
+                          {onEditOrder && (
+                            <button
+                              type="button"
+                              onClick={() => onEditOrder(order)}
+                              className="btn px-2.5 h-7 text-[12px]"
+                              title="Editar orden"
+                            >
+                              <Edit2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                              <span>Editar</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onSelectOrder(order)}
@@ -309,14 +325,29 @@ export function OrderKanban({ orders, onSelectOrder }: OrderKanbanProps) {
                     >
                       <div className="flex items-center justify-between">
                         <code>{order.orderNumber}</code>
-                        <button
-                          type="button"
-                          onClick={(e) => handleShareWhatsApp(e, order)}
-                          className="text-[var(--muted)] hover:text-[var(--text)] p-1"
-                          title="Enviar proforma por WhatsApp"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {onEditOrder && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditOrder(order);
+                              }}
+                              className="text-[var(--muted)] hover:text-[var(--accent)] p-1"
+                              title="Editar orden"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => handleShareWhatsApp(e, order)}
+                            className="text-[var(--muted)] hover:text-[var(--text)] p-1"
+                            title="Enviar proforma por WhatsApp"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       <div>

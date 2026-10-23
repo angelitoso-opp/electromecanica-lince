@@ -1,19 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, History, Trash2 } from 'lucide-react';
+import { Search, History, Trash2, Edit2, Plus } from 'lucide-react';
 import { formatPlate } from '@/lib/utils';
 import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
 
 interface ClientListProps {
   clients: any[];
   onOpenNewClient: () => void;
+  onEditClient: (client: any) => void;
+  onAddVehicle: (client: any) => void;
+  onEditVehicle: (vehicle: any, client: any) => void;
   onOpenVehicleHistory: (vehicle: any, client: any) => void;
   onRefresh: () => void;
 }
 
 export function ClientList({
   clients,
+  onOpenNewClient,
+  onEditClient,
+  onAddVehicle,
+  onEditVehicle,
   onOpenVehicleHistory,
   onRefresh,
 }: ClientListProps) {
@@ -69,9 +76,9 @@ export function ClientList({
           <span className="kpi-delta">Con ficha activa en taller</span>
         </div>
         <div className="kpi">
-          <span className="kpi-label">Unidades en flota</span>
+          <span className="kpi-label">Carros registrados</span>
           <span className="kpi-val">{totalVehicles}</span>
-          <span className="kpi-delta">Vinculadas por número de placa</span>
+          <span className="kpi-delta">Vinculados por número de placa</span>
         </div>
         <div className="kpi">
           <span className="kpi-label">Con DNI / RUC validado</span>
@@ -79,9 +86,9 @@ export function ClientList({
           <span className="kpi-delta">Aptos para facturación inmediata</span>
         </div>
         <div className="kpi">
-          <span className="kpi-label">Cuentas con múltiples autos</span>
+          <span className="kpi-label">Titulares con más de un carro</span>
           <span className="kpi-val">{multiVehicle}</span>
-          <span className="kpi-delta">Flotas familiares o comerciales</span>
+          <span className="kpi-delta">Familias o clientes con varios autos</span>
         </div>
       </div>
 
@@ -111,7 +118,7 @@ export function ClientList({
                 <th>Titular / Cliente</th>
                 <th className="num">Documento</th>
                 <th className="num">Teléfono / WhatsApp</th>
-                <th>Vehículos asignados (placa, modelo y kilometraje)</th>
+                <th>Carros asignados (relación 1 a N)</th>
                 <th>Observaciones</th>
                 <th className="num">Acciones</th>
               </tr>
@@ -147,52 +154,76 @@ export function ClientList({
                     </a>
                   </td>
                   <td>
-                    {client.vehicles?.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {client.vehicles.map((v: any) => (
-                          <div
-                            key={v.id}
-                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--raised)]"
-                          >
-                            <code>{formatPlate(v.plate)}</code>
-                            <span className="text-[12px] font-medium text-[var(--text)]">
-                              {v.brand} {v.model}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {client.vehicles?.map((v: any) => (
+                        <div
+                          key={v.id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--raised)] text-[12px]"
+                        >
+                          <code className="font-semibold">{formatPlate(v.plate)}</code>
+                          <span className="font-medium text-[var(--text)]">
+                            {v.brand} {v.model}
+                          </span>
+                          {v.mileage && (
+                            <span className="text-[var(--muted)] num text-[11px]">
+                              ({v.mileage.toLocaleString()} km)
                             </span>
-                            {v.mileage && (
-                              <span className="text-[12px] text-[var(--muted)] num">
-                                ({v.mileage.toLocaleString()} km)
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => onOpenVehicleHistory(v, client)}
-                              className="btn h-6 px-2 text-[11px]"
-                              title="Ver hoja de vida de la unidad"
-                            >
-                              <History className="w-3 h-3" />
-                              <span>Historial</span>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-[12px] text-[var(--muted)]">
-                        Sin vehículos asignados
-                      </span>
-                    )}
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onEditVehicle(v, client)}
+                            className="btn h-6 px-1.5 text-[11px] ml-0.5"
+                            title={`Editar carro ${v.plate}`}
+                          >
+                            <Edit2 className="w-3 h-3 text-[var(--muted)] hover:text-[var(--accent)]" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onOpenVehicleHistory(v, client)}
+                            className="btn h-6 px-2 text-[11px]"
+                            title="Ver hoja de vida de la unidad"
+                          >
+                            <History className="w-3 h-3" />
+                            <span>Historial</span>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Botón rápido para agregar otro carro a este cliente */}
+                      <button
+                        type="button"
+                        onClick={() => onAddVehicle(client)}
+                        className="btn h-7 px-2.5 text-[12px] text-[var(--accent)] border-dashed border-[var(--border)] hover:border-[var(--accent)]"
+                        title={`Agregar otro carro a ${client.name}`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Carro</span>
+                      </button>
+                    </div>
                   </td>
                   <td className="text-[12px] text-[var(--muted)] max-w-[200px] truncate">
                     {client.notes || 'Sin observaciones'}
                   </td>
                   <td className="num">
-                    <ConfirmButton
-                      label=""
-                      confirmLabel="¿Borrar?"
-                      icon={<Trash2 className="w-3.5 h-3.5" />}
-                      onConfirm={() => handleDeleteClient(client)}
-                      className="btn btn-danger px-2.5 h-7 text-[12px]"
-                      confirmClassName="btn danger px-2.5 h-7 text-[12px]"
-                    />
+                    <div className="inline-flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onEditClient(client)}
+                        className="btn px-2.5 h-7 text-[12px]"
+                        title="Editar datos del titular"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                        <span>Editar</span>
+                      </button>
+                      <ConfirmButton
+                        label=""
+                        confirmLabel="¿Borrar?"
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                        onConfirm={() => handleDeleteClient(client)}
+                        className="btn btn-danger px-2.5 h-7 text-[12px]"
+                        confirmClassName="btn danger px-2.5 h-7 text-[12px]"
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

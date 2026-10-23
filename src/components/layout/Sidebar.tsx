@@ -30,7 +30,7 @@ const primaryNav: NavItem[] = [
 ];
 
 const catalogNav: NavItem[] = [
-  { name: 'Clientes y flota', href: '/clientes', icon: Users },
+  { name: 'Clientes y carros', href: '/clientes', icon: Users },
   { name: 'Almacén y stock', href: '/inventario', icon: Package },
   { name: 'Dictado por voz', href: '/asistente-voz', icon: Mic, meta: 'IA' },
 ];

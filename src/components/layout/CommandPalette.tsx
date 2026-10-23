@@ -156,7 +156,7 @@ export function CommandPalette({
     },
     {
       id: 'act-clients',
-      title: 'Clientes y Flota',
+      title: 'Clientes y Carros',
       desc: 'Directorio de propietarios y vehículos',
       icon: <Users className="w-4 h-4 text-[var(--muted)]" />,
       run: () => {

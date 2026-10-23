@@ -7,6 +7,7 @@ import {
   Share2,
   Send,
   Trash2,
+  Edit2,
 } from 'lucide-react';
 import {
   formatCurrency,
@@ -21,6 +22,7 @@ interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOrderUpdated: () => void;
+  onEditOrder?: (order: any) => void;
 }
 
 const statusMap: Record<string, { label: string; tone: string }> = {
@@ -36,6 +38,7 @@ export function OrderDetailModal({
   isOpen,
   onClose,
   onOrderUpdated,
+  onEditOrder,
 }: OrderDetailModalProps) {
   const toast = useToast();
   const [currentStatus, setCurrentStatus] = useState(
@@ -222,6 +225,17 @@ export function OrderDetailModal({
             </span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {onEditOrder && (
+              <button
+                type="button"
+                onClick={() => onEditOrder(order)}
+                className="btn"
+                title="Editar diagnóstico, servicios y repuestos"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <span className="hidden sm:inline">Editar</span>
+              </button>
+            )}
             <button onClick={handleSendWhatsApp} className="btn" title="Compartir por WhatsApp">
               <Share2 className="w-3.5 h-3.5 text-[var(--positive)]" />
               <span className="hidden sm:inline">WhatsApp</span>

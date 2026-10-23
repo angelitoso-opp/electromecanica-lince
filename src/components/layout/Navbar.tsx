@@ -15,7 +15,7 @@ const routeNames: Record<string, string> = {
   '/': 'Jornada del taller',
   '/ordenes': 'Órdenes de trabajo',
   '/facturas': 'Comprobantes y cobros',
-  '/clientes': 'Clientes y flota',
+  '/clientes': 'Clientes y carros',
   '/inventario': 'Almacén y stock',
   '/asistente-voz': 'Dictado por voz',
 };

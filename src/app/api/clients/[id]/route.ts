@@ -64,6 +64,9 @@ export async function PUT(
         address,
         notes,
       },
+      include: {
+        vehicles: true,
+      },
     });
 
     return NextResponse.json({ success: true, client: updated });

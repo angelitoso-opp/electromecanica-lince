@@ -9,10 +9,11 @@ Sistema web y de escritorio **Local-First** de alto rendimiento diseñado a la m
 
 ## 🚀 Características Principales
 
-1. **Ciclo de Vida de Órdenes de Trabajo (Work Orders):**
-   - Tablero interactivo Kanban con columnas por estado: *Pendiente*, *En Proceso*, *Esperando Repuestos*, *Listo* y *Entregado*.
+1. **Ciclo de Vida y Edición Completa de Órdenes de Trabajo:**
+   - Tablero interactivo Kanban y vista de lista con columnas por estado: *Pendiente*, *En Proceso*, *Esperando Repuestos*, *Listo* y *Entregado*.
    - Generación automática de correlativos únicos (`OT-0001`, `OT-0002`).
-   - Desglose dinámico en tiempo real de servicios de mano de obra, repuestos y descuentos comerciales.
+   - **Edición completa de órdenes guardadas:** modificación de diagnóstico técnico, kilometraje, servicios, repuestos y descuentos con recálculo automático.
+   - Acceso a edición tanto desde el tablero/lista como desde la hoja de detalle lateral.
 
 2. **Recepción Rápida y Dictado por Voz (Speech-to-Text & NLP):**
    - Módulo manos libres usando la API nativa de Web Speech para registrar vehículos en bahía sin ensuciar la pantalla.
@@ -30,8 +31,9 @@ Sistema web y de escritorio **Local-First** de alto rendimiento diseñado a la m
    - Alerta visual inmediata de reposición ante stock crítico (`stock <= minStock`).
    - Deducción transaccional automática de existencias al despachar repuestos en órdenes.
 
-5. **Directorio de Clientes e Historial Clínico Vehicular:**
-   - Relación 1 a N de clientes con múltiples vehículos asociados.
+5. **Directorio de Clientes y Carros (Relación 1 a N):**
+   - Relación 1 a N: un cliente puede registrar y gestionar múltiples carros bajo su mismo nombre con botón directo "+ Carro".
+   - Edición independiente de los datos del cliente (nombre, WhatsApp, DNI/RUC, notas) y de cada carro (placa, marca, modelo, km, año).
    - Bitácora cronológica de reparaciones anteriores, historial de odómetros y repuestos cambiados por placa.
 
 6. **Notificaciones y Presupuestos vía WhatsApp:**
@@ -163,7 +165,7 @@ Para consultar el análisis detallado bajo estándares internacionales, revisa e
 │   │   ├── ordenes/           # Tablero Kanban y lista de órdenes
 │   │   ├── facturas/          # Comprobantes de pago y facturación SUNAT
 │   │   ├── inventario/        # Almacén, SKU y control de existencias
-│   │   ├── clientes/          # Directorio y flota vehicular
+│   │   ├── clientes/          # Directorio de clientes y carros
 │   │   ├── asistente-voz/     # Dictado por voz manos libres
 │   │   └── page.tsx           # Dashboard principal del taller
 │   ├── components/            # Componentes UI (Taste-Skill / Emil Kowalski tokens)

@@ -6,12 +6,14 @@ import { formatCurrency, formatPlate } from '@/lib/utils';
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface OrderFormModalProps {
+  orderToEdit?: any | null;
   isOpen: boolean;
   onClose: () => void;
   onOrderSaved: () => void;
 }
 
 export function OrderFormModal({
+  orderToEdit,
   isOpen,
   onClose,
   onOrderSaved,
@@ -70,6 +72,60 @@ export function OrderFormModal({
   useEffect(() => {
     if (!isOpen) return;
 
+    if (orderToEdit) {
+      setSelectedClientId(orderToEdit.clientId || '');
+      setSelectedVehicleId(orderToEdit.vehicleId || '');
+      setIsNewClient(false);
+      setIssueDescription(orderToEdit.issueDescription || '');
+      setDiagnostic(orderToEdit.diagnostic || '');
+      setTechnicianName(orderToEdit.technicianName || 'Timoteo Pariona');
+      setMileageAtService(orderToEdit.mileageAtService?.toString() || '');
+      setStatus(orderToEdit.status || 'PENDIENTE');
+      setDiscount(orderToEdit.discount?.toString() || '0');
+
+      if (orderToEdit.services && orderToEdit.services.length > 0) {
+        setServices(
+          orderToEdit.services.map((s: any) => ({
+            description: s.description || '',
+            cost: s.cost || 0,
+          }))
+        );
+      } else {
+        setServices([{ description: '', cost: 0 }]);
+      }
+
+      if (orderToEdit.items && orderToEdit.items.length > 0) {
+        setItems(
+          orderToEdit.items.map((i: any) => ({
+            inventoryItemId: i.inventoryItemId || '',
+            description: i.description || '',
+            quantity: i.quantity || 1,
+            unitPrice: i.unitPrice || 0,
+          }))
+        );
+      } else {
+        setItems([]);
+      }
+    } else {
+      setSelectedClientId('');
+      setSelectedVehicleId('');
+      setIsNewClient(false);
+      setNewClientName('');
+      setNewClientPhone('');
+      setNewVehiclePlate('');
+      setNewVehicleBrand('');
+      setNewVehicleModel('');
+      setNewVehicleMileage('');
+      setIssueDescription('');
+      setDiagnostic('');
+      setTechnicianName('Timoteo Pariona');
+      setMileageAtService('');
+      setStatus('PENDIENTE');
+      setDiscount('0');
+      setServices([{ description: '', cost: 0 }]);
+      setItems([]);
+    }
+
     const fetchData = async () => {
       try {
         const [resClients, resInv] = await Promise.all([
@@ -82,32 +138,34 @@ export function OrderFormModal({
         if (dataClients.success) setClients(dataClients.clients);
         if (dataInv.success) setInventory(dataInv.items);
 
-        const voicePrefillStr = sessionStorage.getItem('voice_prefill_order');
-        if (voicePrefillStr) {
-          sessionStorage.removeItem('voice_prefill_order');
-          const prefill = JSON.parse(voicePrefillStr);
+        if (!orderToEdit) {
+          const voicePrefillStr = sessionStorage.getItem('voice_prefill_order');
+          if (voicePrefillStr) {
+            sessionStorage.removeItem('voice_prefill_order');
+            const prefill = JSON.parse(voicePrefillStr);
 
-          if (prefill.matchedClient && prefill.matchedVehicle) {
-            setSelectedClientId(prefill.matchedClient.id);
-            setSelectedVehicleId(prefill.matchedVehicle.id);
-          } else if (prefill.plate) {
-            setIsNewClient(true);
-            setNewVehiclePlate(prefill.plate);
-            if (prefill.vehicleBrand) setNewVehicleBrand(prefill.vehicleBrand);
-            if (prefill.vehicleModel) setNewVehicleModel(prefill.vehicleModel);
-          }
+            if (prefill.matchedClient && prefill.matchedVehicle) {
+              setSelectedClientId(prefill.matchedClient.id);
+              setSelectedVehicleId(prefill.matchedVehicle.id);
+            } else if (prefill.plate) {
+              setIsNewClient(true);
+              setNewVehiclePlate(prefill.plate);
+              if (prefill.vehicleBrand) setNewVehicleBrand(prefill.vehicleBrand);
+              if (prefill.vehicleModel) setNewVehicleModel(prefill.vehicleModel);
+            }
 
-          if (prefill.mileage) {
-            setMileageAtService(prefill.mileage.toString());
-          }
-          if (prefill.suggestedServices?.length > 0) {
-            setServices(prefill.suggestedServices);
-          }
-          if (prefill.suggestedItems?.length > 0) {
-            setItems(prefill.suggestedItems);
-          }
-          if (prefill.rawTranscript) {
-            setIssueDescription(prefill.rawTranscript);
+            if (prefill.mileage) {
+              setMileageAtService(prefill.mileage.toString());
+            }
+            if (prefill.suggestedServices?.length > 0) {
+              setServices(prefill.suggestedServices);
+            }
+            if (prefill.suggestedItems?.length > 0) {
+              setItems(prefill.suggestedItems);
+            }
+            if (prefill.rawTranscript) {
+              setIssueDescription(prefill.rawTranscript);
+            }
           }
         }
       } catch (err) {
@@ -116,7 +174,7 @@ export function OrderFormModal({
     };
 
     fetchData();
-  }, [isOpen]);
+  }, [isOpen, orderToEdit]);
 
   const currentClient = clients.find((c) => c.id === selectedClientId);
   const clientVehicles = currentClient ? currentClient.vehicles : [];
@@ -243,6 +301,36 @@ export function OrderFormModal({
       const validServices = services.filter((s) => s.description.trim() !== '');
       const validItems = items.filter((i) => i.description.trim() !== '');
 
+      if (orderToEdit) {
+        const resOrder = await fetch(`/api/orders/${orderToEdit.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            issueDescription,
+            diagnostic,
+            mileageAtService,
+            technicianName,
+            status,
+            discount: discountVal,
+            services: validServices,
+            items: validItems,
+          }),
+        });
+
+        const dataOrder = await resOrder.json();
+        if (dataOrder.success) {
+          toast.success(
+            'Orden de trabajo actualizada',
+            `Orden ${orderToEdit.orderNumber} modificada exitosamente`
+          );
+          onOrderSaved();
+          onClose();
+        } else {
+          setErrorMsg(dataOrder.error || 'Error al actualizar la orden');
+        }
+        return;
+      }
+
       const resOrder = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -284,9 +372,15 @@ export function OrderFormModal({
         {/* Header */}
         <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--raised)]">
           <div>
-            <h2>Nueva orden de trabajo</h2>
+            <h2>
+              {orderToEdit
+                ? `Editar orden de trabajo · ${orderToEdit.orderNumber}`
+                : 'Nueva orden de trabajo'}
+            </h2>
             <p className="text-[12px] text-[var(--muted)]">
-              Registra el ingreso de unidad, diagnóstico técnico, repuestos y mano de obra.
+              {orderToEdit
+                ? 'Modifica el diagnóstico técnico, kilometraje, servicios, repuestos o estado de la orden.'
+                : 'Registra el ingreso de unidad, diagnóstico técnico, repuestos y mano de obra.'}
             </p>
           </div>
           <button onClick={onClose} className="btn px-2.5" aria-label="Cerrar">
@@ -308,23 +402,47 @@ export function OrderFormModal({
           {/* 1. Cliente y Vehículo */}
           <div className="p-4 rounded-[var(--r-md)] border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
-              <h3>Cliente y vehículo</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsNewClient(!isNewClient);
-                  setSelectedClientId('');
-                  setSelectedVehicleId('');
-                }}
-                className="text-[12px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
-              >
-                {isNewClient
-                  ? 'Seleccionar cliente registrado'
-                  : '+ Registrar cliente y vehículo nuevo'}
-              </button>
+              <h3>Cliente y vehículo asignado</h3>
+              {!orderToEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewClient(!isNewClient);
+                    setSelectedClientId('');
+                    setSelectedVehicleId('');
+                  }}
+                  className="text-[12px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
+                >
+                  {isNewClient
+                    ? 'Seleccionar cliente registrado'
+                    : '+ Registrar cliente y vehículo nuevo'}
+                </button>
+              )}
             </div>
 
-            {!isNewClient ? (
+            {orderToEdit ? (
+              <div className="flex flex-wrap items-center gap-3 p-3 rounded-[var(--r-md)] bg-[var(--raised)] border border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] text-[var(--muted)]">Unidad:</span>
+                  <code className="font-semibold text-[13px] text-[var(--text)]">
+                    {formatPlate(orderToEdit.vehicle?.plate || '')}
+                  </code>
+                  <span className="text-[13px] font-medium text-[var(--text)]">
+                    {orderToEdit.vehicle?.brand} {orderToEdit.vehicle?.model}
+                  </span>
+                </div>
+                <div className="text-[12px] text-[var(--muted)]">·</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] text-[var(--muted)]">Titular:</span>
+                  <span className="text-[13px] font-medium text-[var(--text)]">
+                    {orderToEdit.client?.name}
+                  </span>
+                  <span className="text-[12px] text-[var(--muted)] num">
+                    ({orderToEdit.client?.phone})
+                  </span>
+                </div>
+              </div>
+            ) : !isNewClient ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[12px] text-[var(--muted)] mb-1">
@@ -690,7 +808,11 @@ export function OrderFormModal({
               disabled={saving}
               className="btn btn-primary"
             >
-              {saving ? 'Guardando...' : 'Guardar orden de trabajo'}
+              {saving
+                ? 'Guardando...'
+                : orderToEdit
+                ? 'Guardar cambios en orden'
+                : 'Guardar orden de trabajo'}
             </button>
           </div>
         </form>

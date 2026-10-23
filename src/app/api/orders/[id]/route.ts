@@ -53,6 +53,7 @@ export async function PUT(
       diagnostic,
       issueDescription,
       technicianName,
+      mileageAtService,
       isPaid,
       paymentMethod,
       discount,
@@ -120,6 +121,22 @@ export async function PUT(
       const disc = discount !== undefined ? parseFloat(discount) || 0 : currentOrder.discount;
       const totalAmount = Math.max(0, laborTotal + partsTotal - disc);
 
+      const parsedMileage =
+        mileageAtService !== undefined
+          ? parseInt(mileageAtService) || null
+          : currentOrder.mileageAtService;
+
+      if (parsedMileage && parsedMileage > 0) {
+        try {
+          await tx.vehicle.update({
+            where: { id: currentOrder.vehicleId },
+            data: { mileage: parsedMileage },
+          });
+        } catch {
+          // Si no se puede actualizar el kilometraje del vehículo, continuar
+        }
+      }
+
       return tx.workOrder.update({
         where: { id },
         data: {
@@ -127,6 +144,7 @@ export async function PUT(
           diagnostic: diagnostic !== undefined ? diagnostic : currentOrder.diagnostic,
           issueDescription: issueDescription || currentOrder.issueDescription,
           technicianName: technicianName !== undefined ? technicianName : currentOrder.technicianName,
+          mileageAtService: parsedMileage,
           isPaid: isPaid !== undefined ? isPaid : currentOrder.isPaid,
           paymentMethod: paymentMethod !== undefined ? paymentMethod : currentOrder.paymentMethod,
           discount: disc,
