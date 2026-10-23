@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { X, Printer, Share2, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { printInvoiceDocument } from '@/lib/printReceipt';
 import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
 
 interface InvoicePrintModalProps {
@@ -62,7 +63,7 @@ export function InvoicePrintModal({
   };
 
   const handlePrint = () => {
-    window.print();
+    printInvoiceDocument(invoice);
   };
 
   const handleSendWhatsApp = () => {

@@ -609,5 +609,53 @@ code, pre, .code-id {
     border-bottom: 0;
   }
 }
+
+/* Print optimization */
+@media print {
+  @page {
+    margin: 10mm 12mm;
+    size: auto;
+  }
+
+  html, body {
+    overflow: visible !important;
+    height: auto !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Ocultar elementos de navegación y shells */
+  .app-frame,
+  .app-sidebar,
+  .app-sidebar-desktop,
+  .app-topbar,
+  .sheet-overlay,
+  .modal-backdrop,
+  .toast-region,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ajustar modales y drawers a hoja completa */
+  .sheet-drawer,
+  .modal-card {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important; /* taste-skill-ignore */
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
 }
 

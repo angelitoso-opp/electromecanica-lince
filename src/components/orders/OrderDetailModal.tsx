@@ -15,6 +15,7 @@ import {
   formatPlate,
   generateWhatsAppQuoteUrl,
 } from '@/lib/utils';
+import { printWorkOrderDocument } from '@/lib/printReceipt';
 import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
 
 interface OrderDetailModalProps {
@@ -182,7 +183,7 @@ export function OrderDetailModal({
   };
 
   const handlePrint = () => {
-    window.print();
+    printWorkOrderDocument(order);
   };
 
   const handleDeleteOrder = async () => {
