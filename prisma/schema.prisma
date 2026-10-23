@@ -1,0 +1,161 @@
+// Prisma Schema for Automotive Workshop (Taller Mecánico)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String
+  document  String?   // DNI / RUC / Cédula
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  vehicles  Vehicle[]
+  orders    WorkOrder[]
+}
+
+model Vehicle {
+  id          String      @id @default(cuid())
+  plate       String      @unique // Placa única (ej. ABC-123)
+  brand       String      // Toyota, Nissan, etc.
+  model       String      // Yaris, Hilux, Sentra
+  year        Int?
+  color       String?
+  vin         String?
+  mileage     Int?        // Último kilometraje registrado
+  clientId    String
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workOrders  WorkOrder[]
+}
+
+model InventoryItem {
+  id          String      @id @default(cuid())
+  code        String      @unique // SKU o código de barra/repuesto
+  name        String      // Ej. Filtro de Aceite PH4967
+  category    String      // Lubricantes, Filtros, Frenos, Suspensión, Eléctrico, Motor, Varios
+  brand       String?     // Bosch, Fram, Castrol, Mobil
+  stock       Int         @default(0)
+  minStock    Int         @default(3) // Alerta cuando baje de este umbral
+  unit        String      @default("UNIDAD") // UNIDAD, LITRO, GALON, JUEGO, PAR
+  unitCost    Float       @default(0.0) // Costo de compra
+  unitPrice   Float       @default(0.0) // Precio venta al cliente
+  location    String?     // Estante / Casillero
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  orderItems  WorkOrderItem[]
+}
+
+model WorkOrder {
+  id               String                 @id @default(cuid())
+  orderNumber      String                 @unique // Ej. OT-0001
+  status           String                 @default("PENDIENTE") // PENDIENTE, EN_PROCESO, ESPERANDO_REPUESTOS, LISTO, ENTREGADO, CANCELADO
+  issueDescription String                 // Motivo de ingreso / Falla reportada por el cliente
+  diagnostic       String?                // Diagnóstico del mecánico
+  mileageAtService Int?                   // Kilometraje al ingresar
+  technicianName   String?                // Mecánico asignado
+  laborTotal       Float                  @default(0.0) // Total mano de obra
+  partsTotal       Float                  @default(0.0) // Total repuestos
+  discount         Float                  @default(0.0)
+  totalAmount      Float                  @default(0.0)
+  isPaid           Boolean                @default(false)
+  paymentMethod    String?                // EFECTIVO, TRANSFERENCIA, YAPE_PLIN, TARJETA
+  
+  clientId         String
+  client           Client                 @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  vehicleId        String
+  vehicle          Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  
+  items            WorkOrderItem[]
+  services         WorkOrderService[]
+  progressNotes    WorkOrderProgressNote[]
+  invoices         Invoice[]
+
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+}
+
+model WorkOrderItem {
+  id              String         @id @default(cuid())
+  workOrderId     String
+  workOrder       WorkOrder      @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  
+  description     String         // Nombre del repuesto
+  quantity        Int            @default(1)
+  unitPrice       Float          @default(0.0)
+  subtotal        Float          @default(0.0)
+  isCustomPart    Boolean        @default(false) // Si es un repuesto comprado de emergencia fuera de inventario
+}
+
+model WorkOrderService {
+  id            String    @id @default(cuid())
+  workOrderId   String
+  workOrder     WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  
+  description   String    // Ej. Cambio de pastillas delanteras, escaneo computarizado
+  cost          Float     @default(0.0)
+}
+
+model WorkOrderProgressNote {
+  id          String    @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  
+  note        String    // Texto de la nota o transcripción de audio
+  audioUrl    String?   // Si se adjunta audio
+  source      String    @default("VOZ") // VOZ, MANUAL, WHATSAPP
+  author      String?
+  createdAt   DateTime  @default(now())
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique // Ej. F001-0001 (Factura) o B001-0001 (Boleta)
+  type          String        @default("BOLETA") // FACTURA, BOLETA
+  clientName    String
+  clientDoc     String        // RUC o DNI
+  clientAddress String?
+  clientPhone   String?
+  issueDate     DateTime      @default(now())
+  status        String        @default("EMITIDA") // EMITIDA, PAGADA, ANULADA
+  paymentMethod String        @default("EFECTIVO") // EFECTIVO, YAPE_PLIN, TRANSFERENCIA, TARJETA
+  
+  workOrderId   String?
+  workOrder     WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  subtotal      Float         @default(0.0)
+  igv           Float         @default(0.0) // 18%
+  total         Float         @default(0.0)
+
+  items         InvoiceItem[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Float    @default(0.0)
+  subtotal    Float    @default(0.0)
+}
