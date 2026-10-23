@@ -13,6 +13,7 @@ import {
   ArrowRight,
   X,
   Car,
+  Database,
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -20,6 +21,7 @@ interface CommandPaletteProps {
   onClose: () => void;
   onOpenNewOrder?: () => void;
   onOpenVoiceAssistant?: () => void;
+  onOpenBackup?: () => void;
 }
 
 interface SearchResultOrder {
@@ -52,6 +54,7 @@ export function CommandPalette({
   onClose,
   onOpenNewOrder,
   onOpenVoiceAssistant,
+  onOpenBackup,
 }: CommandPaletteProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +172,16 @@ export function CommandPalette({
       run: () => {
         onClose();
         router.push('/inventario');
+      },
+    },
+    {
+      id: 'act-backup',
+      title: 'Copia de seguridad y respaldo',
+      desc: 'Exportar base de datos local o restaurar snapshot',
+      icon: <Database className="w-4 h-4 text-[var(--accent)]" />,
+      run: () => {
+        onClose();
+        if (onOpenBackup) onOpenBackup();
       },
     },
     {

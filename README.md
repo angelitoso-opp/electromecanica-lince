@@ -75,6 +75,23 @@ El archivo generado queda en:
 
 ---
 
+## 💾 Protección contra Pérdida de Datos y Copias de Seguridad
+
+El sistema cuenta con una triple capa de seguridad para garantizar que nunca se pierda información:
+
+1. **Auto-respaldo diario local:**
+   - Cada vez que cierras la aplicación, se guarda una copia automática en `%APPDATA%\electromecanica-lince\backups\electromecanica-auto-YYYY-MM-DD.db`.
+   - Mantiene automáticamente el historial de los últimos 7 días.
+2. **Descarga en 1 Clic (Exportar a USB o Nube):**
+   - Desde la barra lateral o con `Ctrl + K` seleccionando **"Copia de seguridad y respaldo"**, puedes descargar instantáneamente tu base de datos completa (`.db`).
+   - El sistema ejecuta un `PRAGMA wal_checkpoint(FULL)` garantizando que hasta la última orden guardada esté 100% consolidada en el archivo descargado.
+   - Guarda este archivo en tu USB o carpeta de Google Drive / OneDrive para máxima seguridad.
+3. **Restauración con respaldo preventivo:**
+   - Si cambias de PC o necesitas recuperar un punto anterior, puedes arrastrar tu archivo `.db` en la misma ventana de Respaldo.
+   - El sistema genera un snapshot de seguridad preventivo antes de restaurar, protegiéndote contra sobrescrituras accidentales.
+
+---
+
 ## 🛠️ Instalación y Modo Desarrollo (Web / Local)
 
 ### Prerrequisitos

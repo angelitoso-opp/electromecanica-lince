@@ -8,12 +8,14 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 import { VoiceAssistantModal } from '@/components/voice/VoiceAssistantModal';
 import { OrderFormModal } from '@/components/orders/OrderFormModal';
 import { SingleAccountLogin } from '@/components/auth/SingleAccountLogin';
+import { BackupModal } from '@/components/backup/BackupModal';
 import { X } from 'lucide-react';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [newOrderModalOpen, setNewOrderModalOpen] = useState(false);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
@@ -67,7 +69,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ToastProvider>
       <div className="app-frame">
         {/* Desktop Sidebar in L-Frame */}
-        <Sidebar className="app-sidebar-desktop" onLogout={handleLogout} />
+        <Sidebar
+          className="app-sidebar-desktop"
+          onLogout={handleLogout}
+          onOpenBackup={() => setBackupModalOpen(true)}
+        />
 
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
@@ -88,6 +94,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className="w-full flex-1 pt-12"
                 onNavigate={() => setMobileMenuOpen(false)}
                 onLogout={handleLogout}
+                onOpenBackup={() => {
+                  setMobileMenuOpen(false);
+                  setBackupModalOpen(true);
+                }}
               />
             </div>
           </div>
@@ -112,6 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onClose={() => setCommandPaletteOpen(false)}
           onOpenNewOrder={() => setNewOrderModalOpen(true)}
           onOpenVoiceAssistant={() => setVoiceModalOpen(true)}
+          onOpenBackup={() => setBackupModalOpen(true)}
         />
 
         {/* Global Modals */}
@@ -126,6 +137,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onOrderSaved={() => {
             window.location.reload();
           }}
+        />
+
+        <BackupModal
+          isOpen={backupModalOpen}
+          onClose={() => setBackupModalOpen(false)}
         />
       </div>
     </ToastProvider>

@@ -16,11 +16,11 @@ async function main() {
   await prisma.inventoryItem.deleteMany();
 
   if (!isDemo) {
-    console.log('✅ Base de datos local inicializada en limpio (0 registros pre-cargados) lista para Electromecánica Lince.');
+    console.log('[OK] Base de datos local inicializada en limpio (0 registros pre-cargados) lista para Electromecánica Lince.');
     return;
   }
 
-  console.log('🌱 Sembrando datos demostrativos (--demo)...');
+  console.log('[INFO] Sembrando datos demostrativos (--demo)...');
 
   // 2. Crear Repuestos / Inventario inicial
   const items = await Promise.all([
@@ -317,7 +317,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Base de datos sembrada con éxito!');
+  console.log('[OK] Base de datos sembrada con éxito!');
 }
 
 main()

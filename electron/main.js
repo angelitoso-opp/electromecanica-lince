@@ -253,7 +253,48 @@ async function createWindow() {
 
 app.whenReady().then(createWindow);
 
+
+function performAutoBackup(userDataDir) {
+  try {
+    const dbPath = path.join(userDataDir, 'electromecanica.db');
+    if (!fs.existsSync(dbPath)) return;
+    const stats = fs.statSync(dbPath);
+    if (stats.size < 4096) return;
+
+    const backupsDir = path.join(userDataDir, 'backups');
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const destName = `electromecanica-auto-${today}.db`;
+    const destPath = path.join(backupsDir, destName);
+
+    fs.copyFileSync(dbPath, destPath);
+
+    // Rotación: conservar los últimos 7 respaldos diarios
+    const existing = fs
+      .readdirSync(backupsDir)
+      .filter((f) => f.startsWith('electromecanica-auto-') && f.endsWith('.db'))
+      .sort();
+
+    if (existing.length > 7) {
+      const toRemove = existing.slice(0, existing.length - 7);
+      toRemove.forEach((f) => {
+        try {
+          fs.unlinkSync(path.join(backupsDir, f));
+        } catch {
+          // ignore
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error al generar respaldo automático:', err);
+  }
+}
+
 app.on('window-all-closed', () => {
+  try { performAutoBackup(app.getPath('userData')); } catch {}
   if (serverProcess) {
     try {
       serverProcess.kill();
@@ -266,6 +307,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  try { performAutoBackup(app.getPath('userData')); } catch {}
   if (serverProcess) {
     try {
       serverProcess.kill();

@@ -444,6 +444,14 @@ erDiagram
 
 ---
 
+### RF-12: Sistema de Copias de Seguridad y Restauración (Data Protection & Backup)
+- **RF-12.1 Auto-respaldo Diario Local:** Al cerrar la aplicación o ventana, el proceso de escritorio genera automáticamente una copia de la base de datos en `%APPDATA%\electromecanica-lince\backups\electromecanica-auto-YYYY-MM-DD.db`, con política de rotación automática que preserva los últimos 7 días.
+- **RF-12.2 Exportación Manual en 1 Clic (WAL Checkpoint):** Endpoint `GET /api/backup` que ejecuta `PRAGMA wal_checkpoint(FULL);` para fusionar las transacciones pendientes de la memoria al archivo `.db`, descargando un archivo con timestamp (`electromecanica-lince-backup-YYYY-MM-DD-HHmm.db`) apto para guardar en memorias USB, carpetas sincronizadas de Google Drive / Dropbox o discos externos.
+- **RF-12.3 Restauración Segura con Snapshot Previo:** Endpoint `POST /api/backup` que valida la cabecera mágica de SQLite (`SQLite format 3`), genera una copia de seguridad preventiva (`electromecanica-pre-restore-*.db`) antes de sobrescribir, reemplaza el archivo en caliente y reinicia las conexiones sin riesgo de pérdida por archivo corrupto.
+- **RF-12.4 Modal Interactivo de Diagnóstico de Datos:** Interfaz gráfica accesible desde el menú lateral y desde la Paleta de Comandos (`Ctrl + K`) que reporta en tiempo real la ruta del archivo SQLite, peso en kilobytes, conteo total de clientes, órdenes, facturas y repuestos en inventario.
+
+---
+
 ## 5. Requisitos de Interfaz Externa
 
 ### 5.1 Interfaz de Usuario (UI/UX)

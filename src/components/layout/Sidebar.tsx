@@ -12,6 +12,7 @@ import {
   Mic,
   ChevronsUpDown,
   LogOut,
+  Database,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,10 +39,12 @@ export function Sidebar({
   className,
   onNavigate,
   onLogout,
+  onOpenBackup,
 }: {
   className?: string;
   onNavigate?: () => void;
   onLogout?: () => void;
+  onOpenBackup?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -152,9 +155,21 @@ export function Sidebar({
         )}
       </div>
 
-      <div className="px-2.5 pt-3 pb-1 flex items-center justify-between text-[13px] text-[var(--muted)]">
-        <span>Base local SQLite</span>
-        <code>v2.5</code>
+      {/* Database & Backup link */}
+      <div className="px-2.5 pt-3 pb-1 flex items-center justify-between text-[12px] text-[var(--muted)] border-t border-[var(--rule)] mx-1">
+        <span>Base SQLite</span>
+        {onOpenBackup ? (
+          <button
+            type="button"
+            onClick={onOpenBackup}
+            className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+          >
+            <Database className="w-3 h-3" />
+            <span>Copia de seguridad</span>
+          </button>
+        ) : (
+          <code>v2.5</code>
+        )}
       </div>
     </aside>
   );
