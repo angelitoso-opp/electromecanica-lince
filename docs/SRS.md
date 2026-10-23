@@ -7,11 +7,11 @@
 
 | Campo | Detalle |
 | :--- | :--- |
-| **Código del Documento** | SRS-ELECTROMECANICA-LINCE-2026-V1 |
+| **Código del Documento** | SRS-ELECTROMECANICA-LINCE-2026-V1.1 |
 | **Título del Proyecto** | Electromecánica Lince Workshop Management System |
 | **Organización / Taller** | Electromecánica Lince (Titular: Timoteo Pariona Ramírez) |
 | **Ubicación Operativa** | Jr. Soledad 330, Lince, Lima 15073, Perú · Tel: (01) 704-3157 |
-| **Versión** | 1.0.0 (Release Candidate / Producción) |
+| **Versión** | 1.1.0 (Producción · Ejecutable Portable .EXE & Acceso Monousuario) |
 | **Fecha de Publicación** | 22 de Octubre de 2026 |
 | **Estado** | Aprobado / Línea Base |
 | **Estándar de Referencia** | IEEE Std 830-1998 / ISO/IEC/IEEE 29148:2018 |
@@ -33,12 +33,14 @@ El presente documento constituye la **Especificación de Requisitos de Software 
 4. **Control de Almacén y Kardex de Repuestos:** Inventario con control de existencias, cálculo de márgenes, alertas de stock mínimo y deducción transaccional automática al facturar o despachar en órdenes.
 5. **Historial Clínico Automotriz y Gestión de Flota:** Registro histórico de intervenciones, kilometrajes y repuestos consumidos indexados por número de placa vehicular y documento del propietario (DNI/RUC).
 6. **Integración con Canales de Mensajería (WhatsApp):** Notificaciones con enlaces profundos (`wa.me`) preformateados para envío de presupuestos, cambios de estado y avisos de entrega del vehículo.
+7. **Acceso Exclusivo de Cuenta Única a Medida:** Inicio de sesión protegido y estación de trabajo monousuario para el operador titular (`Timoteo Pariona`), evitando complejidades de gestión multi-usuario innecesarias.
+8. **Distribución Portable en Archivo Único (`ElectromecanicaLince.exe`):** Empaquetado de escritorio Windows 100% autocontenido (con servidor Next.js Standalone, runtime Chromium/Electron, tabla ICU y base de datos SQLite embebidos), operable en cualquier PC sin requerir instalación de Node.js ni conexión a internet.
 
 ### 1.3 Personal Involucrado y Audiencia Destinada
 Este documento está dirigido a:
-- **Jefes de Taller y Administradores:** Para validar la cobertura de los procesos de negocio, reportería y facturación.
-- **Mecánicos de Bahía y Asesores de Servicio:** Para verificar la usabilidad del asistente por voz y la gestión ágil de órdenes.
-- **Desarrolladores de Software y Arquitectos:** Como guía de implementación, esquematización de APIs y modelo de persistencia.
+- **Titular y Jefe de Taller (Timoteo Pariona):** Para validar la cobertura de los procesos de negocio, reportería, seguridad y facturación.
+- **Mecánicos de Bahía:** Para verificar la usabilidad del asistente por voz y la gestión ágil de órdenes.
+- **Desarrolladores de Software y Arquitectos:** Como guía de implementación, esquematización de APIs, empaquetado de escritorio y modelo de persistencia.
 - **Especialistas en QA (Aseguramiento de Calidad):** Para el diseño y ejecución de casos de prueba y matrices de trazabilidad.
 
 ### 1.4 Definiciones, Acrónimos y Abreviaturas
@@ -57,6 +59,7 @@ Este documento está dirigido a:
 | **Web Speech API** | Interfaz del navegador estándar para síntesis y reconocimiento de voz en tiempo real. |
 | **ACID** | Atomicidad, Consistencia, Aislamiento y Durabilidad en transacciones de bases de datos. |
 | **Local-First** | Filosofía de diseño donde los datos y la ejecución primaria ocurren en el entorno local del taller con persistencia inmediata. |
+| **Single-File EXE** | Ejecutable portable de Windows que contiene en un solo archivo binario todos los recursos y librerías necesarias. |
 
 ### 1.5 Referencias Normativas
 - **IEEE Std 830-1998:** IEEE Recommended Practice for Software Requirements Specifications.
@@ -69,66 +72,73 @@ Este documento está dirigido a:
 ## 2. Descripción General del Sistema
 
 ### 2.1 Perspectiva del Producto
-**Electromecánica Lince (`mecanica-app`)** opera como un sistema web local-first de alto rendimiento desplegado en la infraestructura del taller (con capacidad de despliegue en servidor local, intranet o nube privada). No depende de servicios SaaS cerrados o pasarelas de pago de terceros para su operativa diaria.
+**Electromecánica Lince (`mecanica-app`)** opera como una aplicación de escritorio **Local-First** autocontenida desplegada en un **único archivo ejecutable (`ElectromecanicaLince.exe`)**. La arquitectura elimina dependencias externas de servidores o bases de datos en la nube para su operativa diaria.
 
 ```
 +--------------------------------------------------------------------------+
-|                                CLIENTES                                  |
-|  [ Navegadores de Escritorio (Oficina) ]  [ Tablets de Bahía (Mecánicos) ]|
+|          EJECUTABLE PORTABLE WINDOWS: ElectromecanicaLince.exe           |
+|  [ Lanzador Nativo C# .NET + Contenedor de Recursos ZIP Embebido ]       |
 +------------------------------------+-------------------------------------+
-                                     |  HTTP/HTTPS (REST JSON & Web Speech)
+                                     |  Auto-extracción transparente (solo primera vez)
                                      v
 +--------------------------------------------------------------------------+
-|                     NEXT.JS 16 APP ROUTER RUNTIME                        |
-|  +------------------------+  +----------------------------------------+  |
-|  | Interfaz de Usuario    |  | Route Handlers (API RESTful)           |  |
-|  | (React 19 Server/      |  | - /api/orders                          |  |
-|  | Client Components)     |  | - /api/invoices                        |  |
-|  | - Kanban & Vistas      |  | - /api/inventory                       |  |
-|  | - Dictado por Voz      |  | - /api/ai/parse-voice (NLP Engine)     |  |
-|  | - Facturación SUNAT    |  | - /api/clients & /api/vehicles         |  |
-|  +------------------------+  +-------------------+--------------------+  |
-|                                                  |                       |
-|                                                  v                       |
-|                                    +---------------------------+         |
-|                                    | PRISMA ORM ENGINE (v6)    |         |
-|                                    +-------------+-------------+         |
-+--------------------------------------------------|-----------------------+
-                                                   v
-                                     +---------------------------+
-                                     | SQLite Embedded Database  |
-                                     | (dev.db / WAL Mode)       |
-                                     +---------------------------+
+|          ENTORNO DE EJECUCIÓN LOCAL: %LOCALAPPDATA%\ElectromecanicaLince  |
+|  +--------------------------------------------------------------------+  |
+|  | Ventana Nativa Electron (Chromium GUI + Web Speech API + ICU)      |  |
+|  +---------------------------------+----------------------------------+  |
+|                                    |  HTTP Local Loopback (127.0.0.1)     |
+|                                    v                                     |
+|  +--------------------------------------------------------------------+  |
+|  | Servidor Embebido Next.js 16 Standalone (Node Runtime Integrado)   |  |
+|  | - API RESTful (/api/orders, /api/invoices, /api/inventory)          |  |
+|  | - Motor NLP de Dictado por Voz (/api/ai/parse-voice)               |  |
+|  | - Estación de Autenticación de Operador Único (/api/auth)          |  |
+|  +---------------------------------+----------------------------------+  |
+|                                    |                                     |
+|                                    v                                     |
+|                      +---------------------------+                       |
+|                      | PRISMA ORM ENGINE (v6)    |                       |
+|                      +-------------+-------------+                       |
++------------------------------------|-------------------------------------+
+                                     v
+                       +---------------------------+
+                       | Base SQLite del Taller    |
+                       | %APPDATA%\electromecanica |
+                       | -lince\electromecanica.db |
+                       +---------------------------+
 ```
 
 ### 2.2 Funciones Principales del Sistema
-1. **Gestión Integral de Órdenes:** Apertura, diagnóstico inicial, asignación de mano de obra, cargo de repuestos y liquidación final.
-2. **Motor de Voz Inteligente:** Conversión de habla desestructurada a estructuras JSON tipadas con extracción automática de placas vehiculares, kilometrajes numéricos y repuestos.
-3. **Módulo Fiscal y Facturación:** Emisión de comprobantes autorizados con cálculos matemáticos precisos (subtotal, base imponible, IGV redondeado a 2 decimales).
-4. **Almacén y Kardex:** Monitoreo visual de stocks críticos con código de color ámbar/rojo y actualización atómica al emitir servicios.
-5. **Directorio y Flota:** Trazabilidad integral de clientes particulares y corporativos con múltiples vehículos asociados.
-6. **Paleta de Navegación Rápida:** Acceso global vía `Ctrl + K` para cambiar de pantalla, registrar órdenes o buscar clientes en menos de 200 ms.
+1. **Acceso de Cuenta Única:** Pantalla de control de acceso para el operador titular con credenciales y PIN rápido.
+2. **Gestión Integral de Órdenes:** Apertura, diagnóstico inicial, asignación de mano de obra, cargo de repuestos y liquidación final.
+3. **Motor de Voz Inteligente:** Conversión de habla desestructurada a estructuras JSON tipadas con extracción automática de placas vehiculares, kilometrajes numéricos y repuestos.
+4. **Módulo Fiscal y Facturación:** Emisión de comprobantes autorizados con cálculos matemáticos precisos (subtotal, base imponible, IGV redondeado a 2 decimales).
+5. **Almacén y Kardex:** Monitoreo visual de stocks críticos con código de color ámbar/rojo y actualización atómica al emitir servicios.
+6. **Directorio y Flota:** Trazabilidad integral de clientes particulares y corporativos con múltiples vehículos asociados.
+7. **Paleta de Navegación Rápida:** Acceso global vía `Ctrl + K` para cambiar de pantalla, registrar órdenes o buscar clientes en menos de 200 ms.
+8. **Persistencia Local Desconectada:** Capacidad de operar 100% offline sin pérdida de datos ni dependencias de internet.
 
-### 2.3 Perfiles de Usuario y Matriz de Roles
+### 2.3 Perfiles de Usuario y Modelo Monousuario
 
-| Rol | Responsabilidades Principales | Módulos Accesibles |
+Dado que **Electromecánica Lince** es un software a medida para uso personal del taller, el sistema adopta un modelo de **Operador Titular Único**:
+
+| Rol | Responsabilidades Principales | Credenciales por Defecto |
 | :--- | :--- | :--- |
-| **Jefe de Taller / Administrador** | Supervisión global, apertura de órdenes, edición de precios y mano de obra, asignación de técnicos, anulación de comprobantes, purga de datos. | Todos los módulos (Dashboard, Órdenes, Clientes, Inventario, Facturación, Voz, Configuración). |
-| **Mecánico de Bahía / Técnico** | Dictado de diagnósticos por voz, actualización de notas de avance, consulta de repuestos compatibles, cambio de estado de orden. | Asistente de Voz, Tablero Kanban de Órdenes, Consulta de Inventario. |
-| **Cajero / Encargado de Facturación** | Cobro de órdenes terminadas, emisión e impresión de Boletas y Facturas, registro de medios de pago (Efectivo, Yape/Plin, Tarjeta, Transferencia). | Facturas, Órdenes (consulta/pago), Clientes. |
+| **Operador Titular / Jefe de Taller (Timoteo Pariona)** | Control operativo total: apertura de órdenes, diagnóstico, consulta de almacén, cobros, emisión de comprobantes, purga controlada de datos y configuración de estación. | **Usuario:** `lince` (o `admin` / `timoteo`)<br>**Clave:** `lince2026`<br>**PIN:** `1234` |
 
 ### 2.4 Entorno Operativo y Pila Tecnológica
 
 | Componente | Tecnología Seleccionada | Justificación Técnica |
 | :--- | :--- | :--- |
-| **Framework Base** | **Next.js 16 (App Router)** | Renderizado híbrido (SSR/CSR), optimización de assets, rutas tipadas y Server Actions. |
+| **Distribución / Desktop** | **Electron (Windows x64 Standalone)** | Encapsulamiento del servidor y GUI en un solo ejecutable `.exe` independiente sin requerir Node.js en la PC cliente. |
+| **Framework Base** | **Next.js 16 (App Router)** | Renderizado híbrido (SSR/CSR), optimización de assets, rutas tipadas y modo Standalone. |
 | **Librería de Vista** | **React 19** | Manejo de concurrencia, transiciones nativas y compatibilidad con directivas cliente-servidor. |
 | **Lenguaje** | **TypeScript 5.x** | Tipado estricto extremo (`strict: true`) en modelos, APIs y componentes para evitar errores en tiempo de ejecución. |
 | **Estilos y Diseño** | **Tailwind CSS v4** | Utilidades CSS atómicas ultralivianas compiladas con motor Rust LightningCSS; cero runtime overhead. |
 | **Diseño y Motion** | **Taste-Skill & Emil Kowalski Principles** | Tipografía legible, espaciados consistentes, colores funcionales y curvas de animación ergonómicas. |
 | **Capa de Persistencia** | **Prisma ORM (v6)** | Esquema declarativo con migraciones seguras y tipado estático autogenerado para consultas ACID. |
-| **Motor de Base de Datos** | **SQLite 3 (con WAL Mode)** | Almacenamiento embebido sin dependencias de servicios externos pesados; backups mediante copia de un solo archivo. |
-| **Reconocimiento de Voz** | **Web Speech Recognition API** | Estándar de W3C nativo en navegadores Chromium/Edge; captura en tiempo real en español (`es-PE` / `es-ES`). |
+| **Motor de Base de Datos** | **SQLite 3 (con WAL Mode)** | Almacenamiento embebido en `%APPDATA%`, sin servicios pesados en segundo plano; backups por copia directa de archivo. |
+| **Reconocimiento de Voz** | **Web Speech Recognition API** | Estándar nativo habilitado con permisos de audio en Chromium/Electron para dictado en español (`es-PE` / `es-ES`). |
 | **Iconografía** | **Lucide Icons** | Conjunto consistente de más de 1000 iconos vectoriales optimizados en SVG puro. |
 | **Notificaciones UI** | **Sonner (ToastProvider)** | Micro-notificaciones apilables de alto rendimiento para confirmaciones de estado y errores. |
 
@@ -313,7 +323,7 @@ erDiagram
 ---
 
 ### RF-02: Asistente de Voz y Procesador NLP Automotriz
-- **RF-02.1 Captura de Audio Nativa:** Utilizar la API Web Speech del navegador con soporte para transcripción continua en tiempo real, indicando visualmente el estado de escucha activa (onda de audio oscilante y badge de estado).
+- **RF-02.1 Captura de Audio Nativa:** Utilizar la API Web Speech con soporte para transcripción continua en tiempo real, indicando visualmente el estado de escucha activa (onda de audio oscilante y badge de estado).
 - **RF-02.2 Normalización y Detección de Placas Vehiculares:**
   - El motor debe identificar formatos estándar peruanos e internacionales (ej. `ABC-123`, `B4M-230`, `P1Q-456`).
   - Debe corregir transcripciones fonéticas separadas por espacios dictadas por el mecánico (ej. *"a be ce uno dos tres"* $\rightarrow$ `ABC-123`).
@@ -346,7 +356,7 @@ erDiagram
   - Manejo de redondeos contables a dos posiciones decimales.
 - **RF-03.5 Modal de Impresión Profesional:**
   - Generación de vista de comprobante lista para imprimir con estilos CSS de medios `@media print`.
-  - Cabecera con datos de la empresa: Razón Social, RUC, Dirección, Teléfono.
+  - Cabecera con datos del taller: Razón Social (Electromecánica Lince), Dirección (Jr. Soledad 330, Lince), Teléfono.
   - Tabla de detalles con Código, Descripción, Cantidad, Precio Unitario e Importe.
   - Cuadro de liquidación con Subtotal, IGV (18%) e Importe Total en Soles.
   - Firma de recepción y código QR simulado para validación de comprobante electrónico.
@@ -362,7 +372,7 @@ erDiagram
   - Insignia de advertencia cuando el stock sea menor o igual al umbral `minStock`.
   - Filtro rápido para visualizar únicamente artículos con stock bajo.
 - **RF-04.4 Descuento Transaccional:** Al asociar repuestos de inventario a una orden de trabajo guardada, el sistema debe descontar automáticamente las unidades consumidas del almacén.
-- **RF-04.5 Mantenimiento y Edición:** Capacidad de modificar existencias, precios y eliminar artículos que no tengan dependencias huérfanas mediante confirmación de 2 pasos.
+- **RF-04.5 Mantenimiento y Edición:** Capacidad de modificar existencias, precios y eliminar artículos mediante confirmación de 2 pasos.
 
 ---
 
@@ -383,7 +393,7 @@ erDiagram
   - *Apertura de Orden:* Saludo, número de orden asignada, motivo de ingreso y fecha estimada.
   - *Presupuesto y Diagnóstico:* Notificación de repuestos requeridos y total cotizado para aprobación del cliente.
   - *Vehículo Listo:* Notificación de culminación satisfactoria del trabajo, saldo a liquidar e invitación para retiro en taller.
-- **RF-06.3 Compatibilidad Multidispositivo:** Apertura directa en WhatsApp Web (escritorio) o aplicación móvil nativa de WhatsApp según el dispositivo del operador.
+- **RF-06.3 Apertura Externa en Escritorio:** El ejecutable debe abrir los enlaces de WhatsApp directamente en el navegador web predeterminado del sistema operativo mediante `shell.openExternal`.
 
 ---
 
@@ -411,11 +421,26 @@ erDiagram
 ---
 
 ### RF-09: Mantenimiento y Purga de Datos (Data Management)
-- **RF-09.1 Limpieza Selectiva de Registros de Prueba:**
-  - Endpoint seguro `/api/admin/clear-data` para restablecer el entorno operativo.
-  - Opción de eliminar órdenes, facturas, clientes y vehículos de prueba.
-  - Parámetro para preservar de forma intacta el catálogo de repuestos e inventario (`keepInventory: true`).
-- **RF-09.2 Transaccionalidad Total:** La eliminación masiva debe ejecutarse dentro de un bloque `$transaction` de Prisma, garantizando que si falla la eliminación de un registro dependiente, la base de datos regrese intacta a su estado previo.
+- **RF-09.1 Limpieza y Reinicio Controlado:**
+  - Endpoint seguro `/api/admin/clear-data` para restablecer los registros locales de trabajo.
+  - Opción de vaciado total respetando la integridad referencial.
+- **RF-09.2 Transaccionalidad Total:** La eliminación masiva debe ejecutarse dentro de un bloque `$transaction` de Prisma con rollback automático ante fallos.
+
+---
+
+### RF-10: Autenticación de Operador Único y Control de Acceso Local
+- **RF-10.1 Estación de Acceso a Medida:** Pantalla de login diseñada exclusivamente para **Electromecánica Lince** sin formularios de auto-registro ni opciones multi-empresa innecesarias.
+- **RF-10.2 Validación de Credenciales:** Validación local de identificador de operador (`lince`, `admin`, `timoteo`) y clave de taller (`lince2026`) o PIN numérico rápido (`1234`).
+- **RF-10.3 Manejo de Sesión Segura:** Emisión de cookie HTTP-Only (`elince_session`) con expiración extendida para evitar cierres de sesión intempestivos durante la jornada de trabajo.
+- **RF-10.4 Bloqueo de Estación:** Botón directo en la barra lateral para bloquear la sesión del taller al abandonar la computadora.
+
+---
+
+### RF-11: Empaquetado y Distribución en Archivo Único (.EXE)
+- **RF-11.1 Binario Autocontenido:** Compilación en un solo archivo ejecutable (`dist-exe/ElectromecanicaLince.exe`) que encapsula el entorno de ejecución Chromium, la tabla ICU (`icudtl.dat`), librerías gráficas, el servidor Next.js Standalone y la base SQLite.
+- **RF-11.2 Despliegue Zero-Dependency:** La aplicación no requiere que la máquina destino tenga instalado Node.js, Git, Python ni servidores de base de datos.
+- **RF-11.3 Auto-extracción e Inicialización:** En la primera ejecución en una PC, el ejecutable descomprime sus componentes internos en `%LOCALAPPDATA%\ElectromecanicaLince` y crea una base de datos limpia en `%APPDATA%\electromecanica-lince\electromecanica.db`.
+- **RF-11.4 Lanzamiento Rápido en Segundas Ejecuciones:** Tras la primera apertura, los inicios posteriores toman menos de 1.5 segundos arrancando directamente el proceso de bahía.
 
 ---
 
@@ -446,9 +471,10 @@ El sistema implementa el sistema de diseño **Taste-Skill v2** con enfoque estri
 - **Impresoras:** Compatibilidad nativa con impresoras láser/inyección de tinta estándar para formato A4 y miniprinters térmicas de punto de venta (80 mm) vía el driver de impresión del sistema operativo.
 
 ### 5.3 Interfaces de Software y Protocolos
+- **Electron Native Shell:** Ventana de escritorio nativa para Windows con captura de eventos de hardware, soporte de impresión y permisos de captura de audio.
 - **Prisma Client:** Conector de base de datos embebido en Node.js comunicándose con SQLite mediante llamadas de bajo nivel en el sistema de archivos local.
-- **Web Speech API (`webkitSpeechRecognition`):** Interfaz W3C para reconocimiento de voz en navegadores compatibles (Google Chrome, Microsoft Edge, Safari iOS).
-- **WhatsApp Web & URL Schemes:** Interfaz externa mediante protocolo HTTP `https://wa.me/` sin consumo de tokens de API oficiales de pago.
+- **Web Speech API (`webkitSpeechRecognition`):** Interfaz W3C para reconocimiento de voz en navegadores compatibles.
+- **WhatsApp Web & URL Schemes:** Interfaz externa mediante protocolo HTTP `https://wa.me/` despachada a través de `shell.openExternal`.
 
 ---
 
@@ -458,20 +484,20 @@ El sistema implementa el sistema de diseño **Taste-Skill v2** con enfoque estri
 - **RNF-01.1 Latencia de Consultas de Base de Datos:** Todas las consultas de lectura (`findMany`, `findUnique`) en SQLite deben completarse en menos de **25 ms** en condiciones normales de operación.
 - **RNF-01.2 Tiempo de Respuesta de APIs:** Los Route Handlers de Next.js deben responder con payload JSON en menos de **80 ms** en red local.
 - **RNF-01.3 Procesamiento de Reconocimiento de Voz:** El parseo de texto natural y categorización en `/api/ai/parse-voice` debe tomar menos de **30 ms** en CPU estándar al ejecutarse enteramente en memoria mediante algoritmos de tokenización optimizados.
-- **RNF-01.4 Renderizado del Lado del Cliente:** El First Contentful Paint (FCP) de la aplicación no debe exceder **0.8 segundos** en una red cableada o Wi-Fi de taller.
+- **RNF-01.4 Tiempo de Arranque del Ejecutable:** En arranques subsecuentes, la aplicación de escritorio debe cargar completamente en menos de **2.0 segundos**.
 
 ### 6.2 Disponibilidad y Filosofía Local-First (RNF-02)
-- **RNF-02.1 Continuidad Operativa Sin Internet:** La aplicación debe ser 100% operativa en la red de área local (LAN) o en un equipo autónomo. Una caída del proveedor de internet externo no debe interrumpir la creación de órdenes de trabajo, emisión de comprobantes, consulta de inventario o edición de clientes.
-- **RNF-02.2 Modo WAL de SQLite:** La base de datos debe operar en modo `Write-Ahead Logging` (WAL) para permitir lecturas y escrituras concurrentes sin bloqueo de base de datos entre terminales.
+- **RNF-02.1 Continuidad Operativa Sin Internet:** La aplicación es 100% operativa en la PC de trabajo. Una caída del proveedor de internet externo no interrumpe la creación de órdenes de trabajo, emisión de comprobantes, consulta de inventario o edición de clientes.
+- **RNF-02.2 Modo WAL de SQLite:** La base de datos opera en modo `Write-Ahead Logging` (WAL) para permitir lecturas y escrituras concurrentes sin bloqueo de base de datos entre procesos.
 
 ### 6.3 Ergonomía y Usabilidad en Taller (RNF-03)
 - **RNF-03.1 Áreas de Toque Aumentadas:** Los elementos interactivos principales (botones de inicio de voz, selección de estados, guardado de orden) deben tener una altura mínima de **44px a 48px** para facilitar su manipulación táctil con dedos o guantes mecánicos.
 - **RNF-03.2 Claridad Visual y Ausencia de Distracciones:** Cumplimiento con la directiva *Anti-Slop*: fondos limpios, tipografía nítida, ausencia de animaciones lentas o decorados innecesarios que retrasen la operativa del taller.
 
 ### 6.4 Seguridad e Integridad de Datos (RNF-04)
-- **RNF-04.1 Transacciones ACID Atómicas:** Todas las operaciones críticas de negocio (creación de orden con ítems, facturación con deducción de stock y vaciado de datos de prueba) deben estar encapsuladas en bloques `$transaction` de Prisma. Ante cualquier anomalía, se aplicará un rollback automático.
-- **RNF-04.2 Sanitización y Validación de Entrada:** Validación estricta de tipos de datos en el servidor para evitar desbordamientos, inyecciones de código o valores nulos en campos requeridos (`plate`, `orderNumber`, `clientDoc`).
-- **RNF-04.3 Copias de Respaldo Simplificadas:** Al residir la base de datos en un archivo unificado (`prisma/dev.db`), el sistema permite realizar copias de seguridad incrementales o totales mediante una simple copia programada del archivo a almacenamiento externo o memoria USB.
+- **RNF-04.1 Transacciones ACID Atómicas:** Todas las operaciones críticas de negocio (creación de orden con ítems, facturación con deducción de stock y vaciado de datos de prueba) están encapsuladas en bloques `$transaction` de Prisma. Ante cualquier anomalía, se aplica un rollback automático.
+- **RNF-04.2 Sanitización y Validación de Entrada:** Validación estricta de tipos de datos en el servidor para evitar desbordamientos o valores nulos en campos requeridos (`plate`, `orderNumber`, `clientDoc`).
+- **RNF-04.3 Copias de Respaldo Simplificadas:** Al residir la base de datos en un archivo unificado en `%APPDATA%\electromecanica-lince\electromecanica.db`, el taller puede respaldar su información con una simple copia programada a una memoria USB o disco externo.
 
 ### 6.5 Mantenibilidad y Calidad de Código (RNF-05)
 - **RNF-05.1 Cero Advertencias en Compilación:** El código fuente debe compilar con `tsc --noEmit` con **0 errores tipográficos** y pasar el linter automatizado (`lint.mjs`) con **0 fallos y 0 advertencias**.
@@ -480,7 +506,9 @@ El sistema implementa el sistema de diseño **Taste-Skill v2** con enfoque estri
   - `src/components/invoices/`: Tablas y motor de impresión de comprobantes.
   - `src/components/inventory/`: Modales de artículos y listas de existencias.
   - `src/components/voice/`: Asistente de captura por voz.
-  - `src/lib/`: Utilidades compartidas y cliente Prisma unificado (`prisma.ts`).
+  - `src/components/auth/`: Estación de login monousuario.
+  - `electron/`: Punto de entrada de la aplicación de escritorio y gestión del servidor local.
+  - `scripts/`: Empaquetadores de Standalone y binario `.exe`.
 
 ---
 
@@ -497,11 +525,13 @@ El sistema implementa el sistema de diseño **Taste-Skill v2** con enfoque estri
 | **RF-07** | Paleta de Comandos (Ctrl+K) | `src/components/layout/CommandPalette.tsx` | Prueba de pulsación de atajos y navegación instantánea. |
 | **RF-08** | Dashboard y Métricas de Bahía | `src/app/api/dashboard/stats/route.ts`, `StatCards.tsx` | Auditoría de sumatorias de ingresos y conteos de órdenes activas. |
 | **RF-09** | Purga Transaccional de Datos | `src/app/api/admin/clear-data/route.ts` | Ejecución en entorno de staging verificando integridad referencial. |
+| **RF-10** | Autenticación y Cuenta Única | `src/app/api/auth/route.ts`, `SingleAccountLogin.tsx` | Prueba de ingreso con credenciales titular y bloqueo de sesión. |
+| **RF-11** | Empaquetado en Archivo Único .EXE | `scripts/build-exe.mjs`, `electron/main.js` | Ejecución autónoma de `ElectromecanicaLince.exe` sin Node.js en otra PC. |
 
 ---
 
 ## 8. Conclusiones y Próximos Pasos
-El sistema **Electromecánica Lince (`mecanica-app`)** implementa satisfactoriamente todos los requisitos especificados en esta línea base. Para futuras versiones secundarias (v1.1+), se tienen previstos los siguientes hitos de expansión:
+El sistema **Electromecánica Lince (`mecanica-app`)** implementa satisfactoriamente todos los requisitos especificados en esta línea base v1.1. Para futuras versiones secundarias (v1.2+), se tienen previstos los siguientes hitos de expansión:
 1. Sincronización automática de comprobantes con el API de OSE/SUNAT mediante firma digital con certificado XML.
-2. Modo PWA (Progressive Web App) con Service Workers para almacenamiento offline total en caché en tabletas de taller desconectadas.
-3. Generación de presupuestos en formato PDF vectorizado descargable directamente en el dispositivo del cliente.
+2. Generación y exportación de proformas en PDF descargable directamente.
+3. Respaldo automatizado de la base de datos a unidad USB al cerrar la aplicación.
