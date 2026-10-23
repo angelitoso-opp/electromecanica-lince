@@ -105,35 +105,6 @@ Para consultar el análisis de requerimientos bajo normas internacionales, revis
 
 ---
 
-## 📁 Estructura del Proyecto
-
-```text
-├── docs/                      # Documentación formal (SRS.md, diagramas)
-├── prisma/
-│   ├── schema.prisma          # Modelo de datos relacional
-│   ├── seed.js                # Datos iniciales del taller
-│   └── dev.db                 # Base de datos SQLite local
-├── public/                    # Archivos estáticos y favicons
-├── src/
-│   ├── app/
-│   │   ├── api/               # Route Handlers RESTful (orders, invoices, inventory, voice NLP)
-│   │   ├── ordenes/           # Vista de Órdenes de Trabajo y Kanban
-│   │   ├── facturas/          # Vista de Comprobantes de Pago y Facturación
-│   │   ├── inventario/        # Vista de Almacén y Control de Stock
-│   │   ├── clientes/          # Vista de Directorio y Flota Vehicular
-│   │   ├── asistente-voz/     # Vista de Dictado por Voz y Pruebas
-│   │   └── page.tsx           # Dashboard principal con métricas de taller
-│   ├── components/            # Componentes modulares de interfaz
-│   │   ├── layout/            # Sidebar, Navbar, AppShell, CommandPalette
-│   │   ├── orders/            # OrderKanban, OrderFormModal, OrderDetailModal
-│   │   ├── invoices/          # InvoiceTable, InvoiceFormModal, InvoicePrintModal
-│   │   ├── inventory/         # InventoryTable, InventoryFormModal
-│   │   └── voice/             # VoiceAssistantModal
-│   └── lib/                   # Cliente Prisma y funciones de utilidad
-```
-
----
-
 ## 📄 Licencia
 
 Este proyecto está disponible bajo la licencia [MIT](LICENSE).
