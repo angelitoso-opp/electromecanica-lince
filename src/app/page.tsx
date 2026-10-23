@@ -53,13 +53,13 @@ export default function DashboardPage() {
       const res = await fetch('/api/admin/clear-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keepInventory: true }),
+        body: JSON.stringify({ keepInventory: false }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success(
-          'Datos de prueba eliminados',
-          'Clientes, órdenes y facturas demo reseteados (catálogo preservado)'
+          'Base local reiniciada',
+          'Se han vaciado los registros locales del taller.'
         );
         fetchStats();
       } else {
@@ -125,14 +125,16 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <ConfirmButton
-            label="Limpiar prueba"
-            confirmLabel="¿Borrar demo?"
-            icon={<RotateCcw className="w-3.5 h-3.5" />}
-            onConfirm={handleClearSampleData}
-            className="btn btn-danger"
-            confirmClassName="btn danger"
-          />
+          {(stats?.totalClients > 0 || stats?.inventoryCount > 0 || rawRecentOrders.length > 0) && (
+            <ConfirmButton
+              label="Vaciar base"
+              confirmLabel="¿Confirmar vaciado?"
+              icon={<RotateCcw className="w-3.5 h-3.5" />}
+              onConfirm={handleClearSampleData}
+              className="btn btn-danger"
+              confirmClassName="btn danger"
+            />
+          )}
 
           <button onClick={() => setVoiceModalOpen(true)} className="btn">
             <Mic className="w-3.5 h-3.5 text-[var(--accent)]" />

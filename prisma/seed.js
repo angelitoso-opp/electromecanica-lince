@@ -2,9 +2,11 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Sembrando datos iniciales del taller...');
+  const isDemo = process.argv.includes('--demo');
 
   // 1. Limpiar base de datos (en orden)
+  await prisma.invoiceItem.deleteMany();
+  await prisma.invoice.deleteMany();
   await prisma.workOrderProgressNote.deleteMany();
   await prisma.workOrderService.deleteMany();
   await prisma.workOrderItem.deleteMany();
@@ -12,6 +14,13 @@ async function main() {
   await prisma.vehicle.deleteMany();
   await prisma.client.deleteMany();
   await prisma.inventoryItem.deleteMany();
+
+  if (!isDemo) {
+    console.log('✅ Base de datos local inicializada en limpio (0 registros pre-cargados) lista para Electromecánica Lince.');
+    return;
+  }
+
+  console.log('🌱 Sembrando datos demostrativos (--demo)...');
 
   // 2. Crear Repuestos / Inventario inicial
   const items = await Promise.all([

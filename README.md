@@ -66,7 +66,34 @@ Para consultar el análisis de requerimientos bajo normas internacionales, revis
 
 ---
 
-## 🏁 Instalación y Puesta en Marcha
+## 🔐 Acceso de Cuenta Única (Software a Medida)
+
+Al ser un sistema diseñado exclusivamente para la operación interna de **Electromecánica Lince**, cuenta con una estación de acceso de **Operador Único** (sin necesidad de registro multi-cuenta):
+
+- **Usuario:** `lince` *(también admite `timoteo` o `admin`)*
+- **Clave de taller:** `lince2026`
+- **PIN rápido:** `1234`
+- **Base de datos inicial:** Inicia **100% limpia (0 registros)** lista para cargar clientes, vehículos, inventario y órdenes reales del taller.
+
+---
+
+## 🖥️ Ejecutable de Escritorio para Windows (`.exe`)
+
+El proyecto incluye empaquetado nativo con **Electron + Next.js Standalone** para ejecutarse como una aplicación de escritorio independiente en cualquier PC con Windows (sin requerir instalar Node.js ni conexión a internet):
+
+```bash
+# Generar el ejecutable .exe autocontenido
+npm run desktop:build
+```
+
+Una vez compilado, encontrarás el programa listo para usar o copiar por USB a otra PC en:
+- **Ejecutable directo:** `dist-exe/ElectromecanicaLince-win32-x64/ElectromecanicaLince.exe`
+- **Acceso rápido:** `dist-exe/Abrir Electromecanica Lince.bat`
+- **Persistencia automática:** En cada PC donde se ejecute, el programa crea y mantiene su propia base de datos SQLite en `%APPDATA%\electromecanica-lince\electromecanica.db`.
+
+---
+
+## 🏁 Instalación y Puesta en Marcha (Modo Desarrollo)
 
 ### Prerrequisitos
 - Node.js 20.x o superior.

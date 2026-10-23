@@ -11,6 +11,7 @@ import {
   Package,
   Mic,
   ChevronsUpDown,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,9 +37,11 @@ const catalogNav: NavItem[] = [
 export function Sidebar({
   className,
   onNavigate,
+  onLogout,
 }: {
   className?: string;
   onNavigate?: () => void;
+  onLogout?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -126,22 +129,32 @@ export function Sidebar({
 
       <div className="flex-1" />
 
-      {/* Bottom Operational Status */}
-      <div className="mt-4 mx-1.5 p-3 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface)] space-y-1.5">
+      {/* Bottom Operational Status & Single Operator Account */}
+      <div className="mt-4 mx-1.5 p-3 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface)] space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-medium text-[var(--text)]">
-            Bitácora por voz
+            Timoteo Pariona
           </span>
-          <span className="pill ok">Activa</span>
+          <span className="pill ok">Titular</span>
         </div>
-        <p className="text-[13px] text-[var(--muted)] leading-snug">
-          Dicta avances indicando la placa del vehículo atendido.
+        <p className="text-[12px] text-[var(--muted)] leading-snug">
+          Cuenta única local · Base SQLite independiente.
         </p>
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="btn w-full justify-center text-[12px] py-1.5 mt-1"
+          >
+            <LogOut className="w-3.5 h-3.5 text-[var(--muted)]" />
+            <span>Bloquear sesión</span>
+          </button>
+        )}
       </div>
 
       <div className="px-2.5 pt-3 pb-1 flex items-center justify-between text-[13px] text-[var(--muted)]">
         <span>Base local SQLite</span>
-        <code>v2.4</code>
+        <code>v2.5</code>
       </div>
     </aside>
   );

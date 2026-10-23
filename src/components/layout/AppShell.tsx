@@ -7,6 +7,7 @@ import { CommandPalette } from './CommandPalette';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { VoiceAssistantModal } from '@/components/voice/VoiceAssistantModal';
 import { OrderFormModal } from '@/components/orders/OrderFormModal';
+import { SingleAccountLogin } from '@/components/auth/SingleAccountLogin';
 import { X } from 'lucide-react';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [newOrderModalOpen, setNewOrderModalOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+
+  useEffect(() => {
+    fetch('/api/auth')
+      .then((r) => r.json())
+      .then((data) => {
+        setAuthStatus(data.authenticated ? 'authenticated' : 'unauthenticated');
+      })
+      .catch(() => {
+        setAuthStatus('unauthenticated');
+      });
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth', { method: 'DELETE' });
+    } catch {
+      // ignore
+    }
+    setAuthStatus('unauthenticated');
+  };
 
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
@@ -27,11 +49,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  if (authStatus === 'loading') {
+    return (
+      <div className="min-h-screen w-full bg-[var(--ground)] flex items-center justify-center p-6">
+        <code className="text-[13px] text-[var(--muted)]">
+          Iniciando estación Electromecánica Lince...
+        </code>
+      </div>
+    );
+  }
+
+  if (authStatus === 'unauthenticated') {
+    return <SingleAccountLogin onAuthenticated={() => setAuthStatus('authenticated')} />;
+  }
+
   return (
     <ToastProvider>
       <div className="app-frame">
         {/* Desktop Sidebar in L-Frame */}
-        <Sidebar className="app-sidebar-desktop" />
+        <Sidebar className="app-sidebar-desktop" onLogout={handleLogout} />
 
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
@@ -51,6 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Sidebar
                 className="w-full flex-1 pt-12"
                 onNavigate={() => setMobileMenuOpen(false)}
+                onLogout={handleLogout}
               />
             </div>
           </div>

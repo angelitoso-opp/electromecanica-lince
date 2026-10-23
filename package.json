@@ -1,12 +1,17 @@
 {
-  "name": "mecanica-app",
-  "version": "0.1.0",
+  "name": "electromecanica-lince",
+  "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:clean": "node prisma/seed.js",
+    "db:demo": "node prisma/seed.js --demo",
+    "desktop:start": "electron .",
+    "desktop:build": "next build && node scripts/prepare-standalone.mjs && node scripts/build-exe.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -22,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^45.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "prisma": "^5.22.0",
