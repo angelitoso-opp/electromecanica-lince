@@ -66,12 +66,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generar correlativo (ej. F001-0001 o B001-0001)
+    // Generar correlativo de forma segura (ej. F001-0001 o B001-0001)
     const prefix = type === 'FACTURA' ? 'F001' : 'B001';
-    const count = await prisma.invoice.count({
+    const lastInvoice = await prisma.invoice.findFirst({
       where: { type },
+      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
     });
-    const invoiceNumber = `${prefix}-${String(count + 1).padStart(4, '0')}`;
+    let nextNum = 1;
+    if (lastInvoice?.invoiceNumber) {
+      const match = lastInvoice.invoiceNumber.match(/\d+$/);
+      if (match) {
+        nextNum = parseInt(match[0], 10) + 1;
+      }
+    }
+    const invoiceNumber = `${prefix}-${String(nextNum).padStart(4, '0')}`;
 
     // Calcular montos
     const total = items.reduce(

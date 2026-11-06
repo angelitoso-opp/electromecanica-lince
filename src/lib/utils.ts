@@ -40,6 +40,14 @@ export function formatPlate(plate: string): string {
   return clean;
 }
 
+export function formatWhatsAppPhone(rawPhone: string): string {
+  let phone = (rawPhone || '').replace(/\D/g, '');
+  if (phone.length === 9) {
+    phone = `51${phone}`;
+  }
+  return phone;
+}
+
 export function generateWhatsAppQuoteUrl(data: {
   clientPhone: string;
   clientName: string;
@@ -76,10 +84,7 @@ export function generateWhatsAppQuoteUrl(data: {
   message += `*TOTAL A PAGAR:* *${formatCurrency(data.total)}*\n\n`;
   message += `Jr. Soledad 330, Lince · Tel: (01) 704-3157 · Quedamos atentos a su confirmación.`;
 
-  let phone = data.clientPhone.replace(/\D/g, '');
-  if (phone.length === 9) {
-    phone = `51${phone}`;
-  }
+  const phone = formatWhatsAppPhone(data.clientPhone);
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }

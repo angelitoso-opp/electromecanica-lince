@@ -6,37 +6,58 @@ export async function GET() {
     const [
       totalClients,
       totalVehicles,
-      allOrders,
-      allInventory,
+      ordersSummary,
+      recentOrders,
+      inventorySummary,
       invoicesCount,
     ] = await Promise.all([
       prisma.client.count(),
       prisma.vehicle.count(),
+      // Solo campos escalares necesarios para métricas financieras (evita cargar miles de notas y relaciones en memoria)
       prisma.workOrder.findMany({
+        select: {
+          status: true,
+          isPaid: true,
+          totalAmount: true,
+          laborTotal: true,
+          partsTotal: true,
+        },
+      }),
+      // Solo las últimas 8 órdenes con sus detalles para la vista del dashboard
+      prisma.workOrder.findMany({
+        take: 8,
         orderBy: { createdAt: 'desc' },
         include: {
           client: true,
           vehicle: true,
           services: true,
           items: true,
-          progressNotes: {
-            orderBy: { createdAt: 'desc' },
-          },
         },
       }),
       prisma.inventoryItem.findMany({
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          brand: true,
+          category: true,
+          stock: true,
+          minStock: true,
+          unitPrice: true,
+          unit: true,
+        },
         orderBy: { stock: 'asc' },
       }),
       prisma.invoice.count(),
     ]);
 
     const activeStatuses = new Set(['PENDIENTE', 'EN_PROCESO', 'ESPERANDO_REPUESTOS']);
-    const activeOrders = allOrders.filter((o) => activeStatuses.has(o.status)).length;
-    const readyOrders = allOrders.filter((o) => o.status === 'LISTO').length;
+    const activeOrders = ordersSummary.filter((o) => activeStatuses.has(o.status)).length;
+    const readyOrders = ordersSummary.filter((o) => o.status === 'LISTO').length;
 
-    const lowStockItems = allInventory.filter((item) => item.stock <= item.minStock);
+    const lowStockItems = inventorySummary.filter((item) => item.stock <= item.minStock);
 
-    const validOrders = allOrders.filter((o) => o.status !== 'CANCELADO');
+    const validOrders = ordersSummary.filter((o) => o.status !== 'CANCELADO');
     const totalRevenue = +validOrders
       .reduce((sum, o) => sum + (o.totalAmount || 0), 0)
       .toFixed(2);
@@ -56,7 +77,7 @@ export async function GET() {
     const ordersByStatus = ['PENDIENTE', 'EN_PROCESO', 'ESPERANDO_REPUESTOS', 'LISTO', 'ENTREGADO'].map(
       (status) => ({
         status,
-        count: allOrders.filter((o) => o.status === status).length,
+        count: ordersSummary.filter((o) => o.status === status).length,
       })
     );
 
@@ -68,7 +89,7 @@ export async function GET() {
         activeOrders,
         readyOrders,
         lowStockCount: lowStockItems.length,
-        inventoryCount: allInventory.length,
+        inventoryCount: inventorySummary.length,
         invoicesCount,
         totalRevenue,
         totalCollected,
@@ -77,8 +98,8 @@ export async function GET() {
         partsRevenue,
         ordersByStatus,
         lowStockItems: lowStockItems.slice(0, 6),
-        allInventory: allInventory.slice(0, 8),
-        recentOrders: allOrders.slice(0, 8),
+        allInventory: inventorySummary.slice(0, 8),
+        recentOrders,
       },
     });
   } catch (error) {

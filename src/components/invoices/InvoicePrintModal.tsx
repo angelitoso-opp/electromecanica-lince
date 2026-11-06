@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { X, Printer, Share2, Trash2 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatWhatsAppPhone } from '@/lib/utils';
 import { printInvoiceDocument } from '@/lib/printReceipt';
 import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
 
@@ -91,8 +91,7 @@ export function InvoicePrintModal({
     text += `*TOTAL: ${formatCurrency(invoice.total)}*\n\n`;
     text += `Gracias por su preferencia.`;
 
-    let phone = (invoice.clientPhone || '').replace(/\D/g, '');
-    if (phone.length === 9) phone = `51${phone}`;
+    const phone = formatWhatsAppPhone(invoice.clientPhone || '');
 
     const url = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`

@@ -124,14 +124,22 @@ export async function POST(request: Request) {
       fs.copyFileSync(dbPath, backupBeforeRestore);
     }
 
-    // Escribir el nuevo archivo
-    fs.writeFileSync(dbPath, buffer);
+    // Desconectar Prisma para liberar bloqueos de archivo SQLite en Windows
+    await prisma.$disconnect();
 
-    // Eliminar archivos WAL y SHM antiguos para que coincidan con la nueva base restaurada
-    const walFile = `${dbPath}-wal`;
-    const shmFile = `${dbPath}-shm`;
-    if (fs.existsSync(walFile)) fs.rmSync(walFile, { force: true });
-    if (fs.existsSync(shmFile)) fs.rmSync(shmFile, { force: true });
+    try {
+      // Escribir el nuevo archivo
+      fs.writeFileSync(dbPath, buffer);
+
+      // Eliminar archivos WAL y SHM antiguos para que coincidan con la nueva base restaurada
+      const walFile = `${dbPath}-wal`;
+      const shmFile = `${dbPath}-shm`;
+      if (fs.existsSync(walFile)) fs.rmSync(walFile, { force: true });
+      if (fs.existsSync(shmFile)) fs.rmSync(shmFile, { force: true });
+    } finally {
+      // Reconectar Prisma a la base restaurada
+      await prisma.$connect();
+    }
 
     return NextResponse.json({
       success: true,

@@ -95,6 +95,23 @@ export async function DELETE(
       const orderIds = clientOrders.map((o) => o.id);
 
       if (orderIds.length > 0) {
+        // Restaurar repuestos de estas órdenes al inventario
+        const clientItems = await tx.workOrderItem.findMany({
+          where: { workOrderId: { in: orderIds }, inventoryItemId: { not: null } },
+        });
+        for (const item of clientItems) {
+          if (item.inventoryItemId) {
+            try {
+              await tx.inventoryItem.update({
+                where: { id: item.inventoryItemId },
+                data: { stock: { increment: item.quantity } },
+              });
+            } catch {
+              // Si el repuesto ya no existe en el catálogo, continuar
+            }
+          }
+        }
+
         // Desvincular comprobantes de estas órdenes
         await tx.invoice.updateMany({
           where: { workOrderId: { in: orderIds } },

@@ -94,7 +94,21 @@ export async function PUT(
       }
 
       if (items && Array.isArray(items)) {
-        // Revertir inventario previo si era necesario o simplemente actualizar
+        // 1. Revertir el stock de los repuestos previamente asignados a esta orden
+        for (const oldItem of currentOrder.items) {
+          if (oldItem.inventoryItemId) {
+            try {
+              await tx.inventoryItem.update({
+                where: { id: oldItem.inventoryItemId },
+                data: { stock: { increment: oldItem.quantity } },
+              });
+            } catch {
+              // El repuesto pudo ser eliminado del catálogo, continuar
+            }
+          }
+        }
+
+        // 2. Reemplazar los items de la orden
         await tx.workOrderItem.deleteMany({ where: { workOrderId: id } });
         await tx.workOrderItem.createMany({
           data: items.map((i: any) => {
@@ -111,6 +125,22 @@ export async function PUT(
             };
           }),
         });
+
+        // 3. Descontar el nuevo stock de los repuestos asignados
+        for (const newItem of items) {
+          if (newItem.inventoryItemId) {
+            const qty = parseInt(newItem.quantity) || 1;
+            try {
+              await tx.inventoryItem.update({
+                where: { id: newItem.inventoryItemId },
+                data: { stock: { decrement: qty } },
+              });
+            } catch {
+              // El repuesto no existe en inventario
+            }
+          }
+        }
+
         partsTotal = items.reduce(
           (sum: number, i: any) =>
             sum + (parseInt(i.quantity) || 1) * (parseFloat(i.unitPrice) || 0),
@@ -178,11 +208,42 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.workOrder.delete({
-      where: { id },
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Obtener repuestos asignados a la orden para devolverlos al inventario
+      const order = await tx.workOrder.findUnique({
+        where: { id },
+        include: { items: true },
+      });
+
+      if (order?.items) {
+        for (const item of order.items) {
+          if (item.inventoryItemId) {
+            try {
+              await tx.inventoryItem.update({
+                where: { id: item.inventoryItemId },
+                data: { stock: { increment: item.quantity } },
+              });
+            } catch {
+              // Si el repuesto ya no existe en el catálogo, continuar
+            }
+          }
+        }
+      }
+
+      // 2. Desvincular comprobantes asociados
+      await tx.invoice.updateMany({
+        where: { workOrderId: id },
+        data: { workOrderId: null },
+      });
+
+      // 3. Eliminar orden de trabajo (cascada en items, services, progressNotes)
+      await tx.workOrder.delete({
+        where: { id },
+      });
     });
 
-    return NextResponse.json({ success: true, message: 'Orden eliminada' });
+    return NextResponse.json({ success: true, message: 'Orden eliminada y repuestos restaurados al almacén' });
   } catch (error) {
     console.error('Error deleting order:', error);
     return NextResponse.json(

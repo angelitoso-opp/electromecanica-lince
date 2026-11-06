@@ -76,9 +76,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generar código correlativo de orden (ej. OT-0004)
-    const count = await prisma.workOrder.count();
-    const orderNumber = `OT-${String(count + 1).padStart(4, '0')}`;
+    // Generar código correlativo de orden de forma segura (ej. OT-0004)
+    const latestOrder = await prisma.workOrder.findFirst({
+      orderBy: { orderNumber: 'desc' },
+      select: { orderNumber: true },
+    });
+    let nextNum = 1;
+    if (latestOrder?.orderNumber) {
+      const match = latestOrder.orderNumber.match(/\d+$/);
+      if (match) {
+        nextNum = parseInt(match[0], 10) + 1;
+      }
+    }
+    const orderNumber = `OT-${String(nextNum).padStart(4, '0')}`;
 
     // Calcular subtotales
     const laborTotal = services.reduce(
