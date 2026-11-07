@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const type = searchParams.get('type');
     const query = searchParams.get('q')?.trim() || '';
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     if (type && type !== 'TODOS') {
       whereClause.type = type;
@@ -66,32 +66,50 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generar correlativo de forma segura (ej. F001-0001 o B001-0001)
-    const prefix = type === 'FACTURA' ? 'F001' : 'B001';
-    const lastInvoice = await prisma.invoice.findFirst({
-      where: { type },
-      orderBy: { invoiceNumber: 'desc' },
-      select: { invoiceNumber: true },
-    });
-    let nextNum = 1;
-    if (lastInvoice?.invoiceNumber) {
-      const match = lastInvoice.invoiceNumber.match(/\d+$/);
-      if (match) {
-        nextNum = parseInt(match[0], 10) + 1;
+    // 1. Evitar duplicar comprobante activo para una misma orden (Hallazgo #8)
+    if (workOrderId) {
+      const existing = await prisma.invoice.findFirst({
+        where: { workOrderId, status: { not: 'ANULADA' } },
+        select: { invoiceNumber: true },
+      });
+      if (existing) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `La orden de trabajo ya cuenta con un comprobante emitido (${existing.invoiceNumber}).`,
+          },
+          { status: 400 }
+        );
       }
     }
+
+    // 2. Generar correlativo numérico robusto superando 9,999 (Hallazgo #11)
+    const prefix = type === 'FACTURA' ? 'F001' : 'B001';
+    const allInvoices = await prisma.invoice.findMany({
+      where: { type },
+      select: { invoiceNumber: true },
+    });
+    let maxNum = 0;
+    for (const inv of allInvoices) {
+      const match = inv.invoiceNumber.match(/\d+$/);
+      if (match) {
+        const n = parseInt(match[0], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+    const nextNum = maxNum + 1;
     const invoiceNumber = `${prefix}-${String(nextNum).padStart(4, '0')}`;
 
-    // Calcular montos
+    // 3. Calcular montos
     const total = items.reduce(
       (sum: number, item: any) =>
         sum + (parseInt(item.quantity) || 1) * (parseFloat(item.unitPrice) || 0),
       0
     );
 
-    // Si es Factura, desglosar IGV (18%)
-    const subtotal = type === 'FACTURA' ? +(total / 1.18).toFixed(2) : +total.toFixed(2);
-    const igv = type === 'FACTURA' ? +(total - subtotal).toFixed(2) : 0;
+    // 4. Desglose contable oficial de IGV (18%) conforme a normativa peruana (Hallazgo #7)
+    const subtotal = +(total / 1.18).toFixed(2);
+    const igv = +(total - subtotal).toFixed(2);
 
     const invoice = await prisma.invoice.create({
       data: {

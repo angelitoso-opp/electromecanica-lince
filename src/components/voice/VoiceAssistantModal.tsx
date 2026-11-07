@@ -23,6 +23,7 @@ export function VoiceAssistantModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedResult, setParsedResult] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -42,11 +43,19 @@ export function VoiceAssistantModal({
             currentTranscript += event.results[i][0].transcript;
           }
           setTranscript(currentTranscript);
+          setVoiceNotice(null);
         };
 
         recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
+          if (event.error === 'not-allowed') {
+            setVoiceNotice('Permiso de micrófono bloqueado. Habilita el acceso o escribe directamente.');
+          } else if (event.error === 'network') {
+            setVoiceNotice('El reconocimiento de voz del navegador requiere internet. Puedes escribir directamente abajo.');
+          } else if (event.error !== 'no-speech') {
+            setVoiceNotice(`Aviso de voz: ${event.error}. Puedes redactar el trabajo directamente.`);
+          }
         };
 
         recognition.onend = () => {
@@ -54,6 +63,8 @@ export function VoiceAssistantModal({
         };
 
         recognitionRef.current = recognition;
+      } else {
+        setVoiceNotice('El dictado por voz directo no está disponible en este navegador/entorno. Puedes escribir abajo.');
       }
     }
   }, []);
@@ -197,6 +208,12 @@ export function VoiceAssistantModal({
               )}
             </button>
           </div>
+
+          {voiceNotice && (
+            <div className="p-3 text-[12px] rounded-[var(--r-md)] bg-[var(--raised)] border border-[var(--border)] text-[var(--muted)]">
+              ℹ️ {voiceNotice}
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[12px]">

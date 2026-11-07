@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import fs from 'fs';
-import path from 'path';
 
 export async function GET(request: Request) {
   try {
@@ -131,11 +130,13 @@ export async function POST(request: Request) {
       // Escribir el nuevo archivo
       fs.writeFileSync(dbPath, buffer);
 
-      // Eliminar archivos WAL y SHM antiguos para que coincidan con la nueva base restaurada
+      // Eliminar archivos WAL, SHM y JOURNAL antiguos para que coincidan con la nueva base restaurada
       const walFile = `${dbPath}-wal`;
       const shmFile = `${dbPath}-shm`;
+      const journalFile = `${dbPath}-journal`;
       if (fs.existsSync(walFile)) fs.rmSync(walFile, { force: true });
       if (fs.existsSync(shmFile)) fs.rmSync(shmFile, { force: true });
+      if (fs.existsSync(journalFile)) fs.rmSync(journalFile, { force: true });
     } finally {
       // Reconectar Prisma a la base restaurada
       await prisma.$connect();

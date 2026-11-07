@@ -9,6 +9,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const {
+      code,
       name,
       category,
       brand,
@@ -21,9 +22,26 @@ export async function PUT(
       notes,
     } = body;
 
+    // Si se modifica el código SKU, validar que no choque con otro repuesto existente (Hallazgo #14)
+    if (code) {
+      const existing = await prisma.inventoryItem.findFirst({
+        where: {
+          code: String(code).trim().toUpperCase(),
+          NOT: { id },
+        },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { success: false, error: 'Ya existe otro repuesto registrado con ese código SKU' },
+          { status: 400 }
+        );
+      }
+    }
+
     const updated = await prisma.inventoryItem.update({
       where: { id },
       data: {
+        code: code ? String(code).trim().toUpperCase() : undefined,
         name,
         category,
         brand,

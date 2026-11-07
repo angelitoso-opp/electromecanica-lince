@@ -49,21 +49,26 @@ export default function DashboardPage() {
   }, []);
 
   const handleClearSampleData = async () => {
+    const pin = window.prompt(
+      'ADVERTENCIA: Esta acción vaciará las órdenes, clientes y vehículos registrados.\n\nPara confirmar, ingrese el PIN de seguridad del taller (Por defecto: 1234):'
+    );
+    if (!pin) return;
+
     try {
       const res = await fetch('/api/admin/clear-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keepInventory: false }),
+        body: JSON.stringify({ pin, keepInventory: false }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success(
           'Base local reiniciada',
-          'Se han vaciado los registros locales del taller.'
+          'Se guardó un respaldo de emergencia y se han vaciado los registros locales.'
         );
         fetchStats();
       } else {
-        toast.error('Error', data.error || 'Error al limpiar datos');
+        toast.error('Acceso denegado', data.error || 'PIN incorrecto');
       }
     } catch (err) {
       console.error(err);

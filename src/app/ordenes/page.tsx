@@ -43,7 +43,15 @@ function OrdersContent() {
       setOrderToEdit(null);
       setOrderModalOpen(true);
     }
-  }, [searchParams]);
+
+    const targetOrderId = searchParams.get('orderId') || searchParams.get('order');
+    if (targetOrderId && orders.length > 0) {
+      const match = orders.find((o) => o.id === targetOrderId || o.orderNumber === targetOrderId);
+      if (match) {
+        setSelectedOrder(match);
+      }
+    }
+  }, [searchParams, orders]);
 
   const handleEditOrder = (order: any) => {
     setSelectedOrder(null);

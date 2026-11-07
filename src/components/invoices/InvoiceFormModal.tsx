@@ -108,6 +108,14 @@ export function InvoiceFormModal({
       });
     });
 
+    if (order.discount && Number(order.discount) > 0) {
+      newItems.push({
+        description: `Descuento comercial aplicado (${order.orderNumber})`,
+        quantity: 1,
+        unitPrice: -Math.abs(Number(order.discount)),
+      });
+    }
+
     if (newItems.length > 0) {
       setItems(newItems);
     }
@@ -132,8 +140,9 @@ export function InvoiceFormModal({
       sum + (item.quantity || 1) * (parseFloat(item.unitPrice as any) || 0),
     0
   );
-  const subtotal = type === 'FACTURA' ? +(total / 1.18).toFixed(2) : total;
-  const igv = type === 'FACTURA' ? +(total - subtotal).toFixed(2) : 0;
+  // En Perú, tanto Factura como Boleta desglosan base imponible y 18% IGV
+  const subtotal = +(total / 1.18).toFixed(2);
+  const igv = +(total - subtotal).toFixed(2);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

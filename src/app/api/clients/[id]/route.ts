@@ -85,50 +85,29 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Verificar si el cliente tiene órdenes de trabajo históricas o activas (Hallazgo #4)
+    const ordersCount = await prisma.workOrder.count({
+      where: { clientId: id },
+    });
+
+    if (ordersCount > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `No se puede eliminar el cliente porque tiene ${ordersCount} orden(es) de trabajo registradas en su historial. Elimine o reasigne las órdenes primero para proteger los registros del taller.`,
+        },
+        { status: 400 }
+      );
+    }
     
     await prisma.$transaction(async (tx) => {
-      // 1. Encontrar órdenes asociadas a este cliente
-      const clientOrders = await tx.workOrder.findMany({
-        where: { clientId: id },
-        select: { id: true },
-      });
-      const orderIds = clientOrders.map((o) => o.id);
-
-      if (orderIds.length > 0) {
-        // Restaurar repuestos de estas órdenes al inventario
-        const clientItems = await tx.workOrderItem.findMany({
-          where: { workOrderId: { in: orderIds }, inventoryItemId: { not: null } },
-        });
-        for (const item of clientItems) {
-          if (item.inventoryItemId) {
-            try {
-              await tx.inventoryItem.update({
-                where: { id: item.inventoryItemId },
-                data: { stock: { increment: item.quantity } },
-              });
-            } catch {
-              // Si el repuesto ya no existe en el catálogo, continuar
-            }
-          }
-        }
-
-        // Desvincular comprobantes de estas órdenes
-        await tx.invoice.updateMany({
-          where: { workOrderId: { in: orderIds } },
-          data: { workOrderId: null },
-        });
-        // Eliminar órdenes (WorkOrder cascada: items, services, progressNotes)
-        await tx.workOrder.deleteMany({
-          where: { id: { in: orderIds } },
-        });
-      }
-
-      // 2. Eliminar vehículos del cliente
+      // 1. Eliminar vehículos del cliente (que ya sabemos no tienen órdenes)
       await tx.vehicle.deleteMany({
         where: { clientId: id },
       });
 
-      // 3. Eliminar el cliente
+      // 2. Eliminar el cliente
       await tx.client.delete({
         where: { id },
       });

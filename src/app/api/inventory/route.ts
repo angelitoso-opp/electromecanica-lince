@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const category = searchParams.get('category') || '';
     const lowStock = searchParams.get('lowStock') === 'true';
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     if (query) {
       whereClause.OR = [

@@ -126,15 +126,21 @@ export async function PUT(
           }),
         });
 
-        // 3. Descontar el nuevo stock de los repuestos asignados
+        // 3. Descontar el nuevo stock de los repuestos asignados sin permitir negativos (Hallazgo #5)
         for (const newItem of items) {
           if (newItem.inventoryItemId) {
             const qty = parseInt(newItem.quantity) || 1;
             try {
-              await tx.inventoryItem.update({
+              const inv = await tx.inventoryItem.findUnique({
                 where: { id: newItem.inventoryItemId },
-                data: { stock: { decrement: qty } },
+                select: { stock: true },
               });
+              if (inv) {
+                await tx.inventoryItem.update({
+                  where: { id: newItem.inventoryItemId },
+                  data: { stock: Math.max(0, inv.stock - qty) },
+                });
+              }
             } catch {
               // El repuesto no existe en inventario
             }

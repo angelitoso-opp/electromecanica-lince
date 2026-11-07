@@ -154,8 +154,6 @@ export function OrderDetailModal({
       const data = await res.json();
       if (data.success) {
         setNewNote('');
-        if (!order.progressNotes) order.progressNotes = [];
-        order.progressNotes.unshift(data.note);
         onOrderUpdated();
         toast.success('Bitácora actualizada', 'Se añadió el avance técnico');
       } else {

@@ -69,7 +69,7 @@ export function Navbar({
           <Search className="w-4 h-4" />
         </button>
 
-        <span className="pill ok hidden lg:inline-flex">Turno abierto · 4 bahías</span>
+        <span className="pill ok hidden lg:inline-flex">Taller Operativo · Lince</span>
 
         {/* Modificador de tamaño para accesibilidad / taller */}
         <ScaleControl />

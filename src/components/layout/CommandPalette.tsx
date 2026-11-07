@@ -205,7 +205,7 @@ export function CommandPalette({
         id: `order-${o.id}`,
         run: () => {
           onClose();
-          router.push('/ordenes');
+          router.push(`/ordenes?orderId=${o.id}`);
         },
       });
     });
@@ -306,7 +306,7 @@ export function CommandPalette({
                       key={o.id}
                       onClick={() => {
                         onClose();
-                        router.push('/ordenes');
+                        router.push(`/ordenes?orderId=${o.id}`);
                       }}
                       className={`w-full text-left px-3 py-2 rounded-[var(--r-md)] flex items-center justify-between text-[13px] ${
                         isSelected ? 'bg-[var(--active)] text-[var(--text)]' : 'hover:bg-[var(--raised)] text-[var(--text)]'

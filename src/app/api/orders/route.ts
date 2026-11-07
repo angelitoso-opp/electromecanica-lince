@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const query = searchParams.get('q')?.trim() || '';
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     if (status && status !== 'TODOS') {
       whereClause.status = status;
@@ -76,18 +76,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generar código correlativo de orden de forma segura (ej. OT-0004)
-    const latestOrder = await prisma.workOrder.findFirst({
-      orderBy: { orderNumber: 'desc' },
+    // Generar código correlativo de orden de forma segura superando 9,999 (Hallazgo #11)
+    const allOrders = await prisma.workOrder.findMany({
       select: { orderNumber: true },
     });
-    let nextNum = 1;
-    if (latestOrder?.orderNumber) {
-      const match = latestOrder.orderNumber.match(/\d+$/);
+    let maxNum = 0;
+    for (const ord of allOrders) {
+      const match = ord.orderNumber.match(/\d+$/);
       if (match) {
-        nextNum = parseInt(match[0], 10) + 1;
+        const n = parseInt(match[0], 10);
+        if (n > maxNum) maxNum = n;
       }
     }
+    const nextNum = maxNum + 1;
     const orderNumber = `OT-${String(nextNum).padStart(4, '0')}`;
 
     // Calcular subtotales
@@ -161,18 +162,22 @@ export async function POST(request: Request) {
         },
       });
 
-      // 2. Descontar del inventario los repuestos usados (si tienen inventoryItemId)
+      // 2. Descontar del inventario protegiendo contra stock negativo (Hallazgo #5)
       for (const item of items) {
         if (item.inventoryItemId) {
           const qty = parseInt(item.quantity) || 1;
-          await tx.inventoryItem.update({
+          const invItem = await tx.inventoryItem.findUnique({
             where: { id: item.inventoryItemId },
-            data: {
-              stock: {
-                decrement: qty,
-              },
-            },
+            select: { stock: true },
           });
+          if (invItem) {
+            await tx.inventoryItem.update({
+              where: { id: item.inventoryItemId },
+              data: {
+                stock: Math.max(0, invItem.stock - qty),
+              },
+            });
+          }
         }
       }
 

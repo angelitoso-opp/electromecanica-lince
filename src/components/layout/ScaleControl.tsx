@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Type, Minus, Plus, RotateCcw, X, Check } from 'lucide-react';
+import { Type, Minus, Plus, RotateCcw, X } from 'lucide-react';
 
 const MIN_SCALE = 90;
 const MAX_SCALE = 130;
@@ -14,6 +14,19 @@ const PRESETS = [
   { value: 115, label: 'Cómodo' },
   { value: 130, label: 'Taller / Senior' },
 ];
+
+function applyScale(newScale: number) {
+  const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+  const factor = (clamped / 100).toFixed(2);
+  if (typeof document !== 'undefined') {
+    document.documentElement.style.setProperty('--ui-scale', factor);
+  }
+  try {
+    localStorage.setItem('elince_ui_scale', String(clamped));
+  } catch {
+    // ignore
+  }
+}
 
 export function ScaleControl() {
   const [scale, setScale] = useState<number>(DEFAULT_SCALE);
@@ -62,18 +75,6 @@ export function ScaleControl() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
-
-  const applyScale = (newScale: number) => {
-    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
-    const factor = (clamped / 100).toFixed(2);
-    document.documentElement.style.setProperty('--ui-scale', factor);
-    document.documentElement.setAttribute('data-ui-scale', String(clamped));
-    try {
-      localStorage.setItem('elince_ui_scale', String(clamped));
-    } catch {
-      // ignore
-    }
-  };
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);

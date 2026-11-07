@@ -70,15 +70,27 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.invoice.delete({
+    const { searchParams } = new URL(request.url);
+    const hardDelete = searchParams.get('hard') === 'true';
+
+    if (hardDelete) {
+      await prisma.invoice.delete({
+        where: { id },
+      });
+      return NextResponse.json({ success: true, message: 'Comprobante eliminado' });
+    }
+
+    // Anulación formal según normativa tributaria para preservar el correlativo
+    const updated = await prisma.invoice.update({
       where: { id },
+      data: { status: 'ANULADA' },
     });
 
-    return NextResponse.json({ success: true, message: 'Comprobante eliminado' });
+    return NextResponse.json({ success: true, message: 'Comprobante anulado', invoice: updated });
   } catch (error) {
-    console.error('Error deleting invoice:', error);
+    console.error('Error deleting/annulling invoice:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al eliminar comprobante' },
+      { success: false, error: 'Error al anular comprobante' },
       { status: 500 }
     );
   }

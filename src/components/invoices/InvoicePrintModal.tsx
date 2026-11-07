@@ -165,6 +165,9 @@ export function InvoicePrintModal({
           <div className="flex flex-col sm:flex-row justify-between items-start border-b border-[var(--border)] pb-4 gap-4">
             <div>
               <h2 className="text-[15px] font-semibold text-[var(--text)]">Electromecánica Lince</h2>
+              <p className="text-[12px] font-medium text-[var(--text)]">
+                PARIONA RAMIREZ TIMOTEO
+              </p>
               <p className="text-[12px] text-[var(--muted)]">
                 Diagnóstico Computarizado & Electromecánica Automotriz Integral
               </p>
@@ -175,11 +178,11 @@ export function InvoicePrintModal({
 
             <div className="p-3 rounded-[var(--r-md)] bg-[var(--raised)] border border-[var(--border)] text-center min-w-[200px]">
               <div className="text-[11px] font-semibold text-[var(--muted)] uppercase">
-                R.U.C. <code>20601234567</code>
+                R.U.C. <code>10082681537</code>
               </div>
               <div className="font-semibold text-[13px] text-[var(--text)] mt-0.5">
                 {invoice.type === 'FACTURA'
-                  ? 'Factura Electrónica'
+                  ? 'Factura de Venta'
                   : 'Boleta de Venta'}
               </div>
               <code className="text-[13px] font-medium text-[var(--text)] block mt-1">
@@ -259,23 +262,24 @@ export function InvoicePrintModal({
           {/* Subtotals & Total */}
           <div className="flex justify-end pt-1">
             <div className="w-64 space-y-1.5 p-3.5 rounded-[var(--r-md)] bg-[var(--raised)] border border-[var(--border)] num">
-              {invoice.type === 'FACTURA' && (
-                <>
-                  <div className="flex justify-between text-[12px] text-[var(--muted)]">
-                    <span>Op. gravada:</span>
-                    <span>{formatCurrency(invoice.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-[12px] text-[var(--muted)]">
-                    <span>I.G.V. (18%):</span>
-                    <span>{formatCurrency(invoice.igv)}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex justify-between text-[12px] text-[var(--muted)]">
+                <span>Op. gravada:</span>
+                <span>{formatCurrency(invoice.subtotal || (invoice.total / 1.18))}</span>
+              </div>
+              <div className="flex justify-between text-[12px] text-[var(--muted)]">
+                <span>I.G.V. (18%):</span>
+                <span>{formatCurrency(invoice.igv || (invoice.total - (invoice.total / 1.18)))}</span>
+              </div>
               <div className="flex justify-between pt-1.5 border-t border-[var(--border)] text-[14px] font-semibold text-[var(--text)]">
                 <span>Importe total:</span>
                 <span>{formatCurrency(invoice.total)}</span>
               </div>
             </div>
+          </div>
+
+          <div className="pt-4 border-t border-[var(--border)] text-center text-[11px] text-[var(--muted)] space-y-0.5">
+            <p className="font-semibold text-[var(--text)]">Documento de Control y Liquidación Interna de Servicio</p>
+            <p>Emisión oficial de Comprobante de Pago generada en el Portal SUNAT · R.U.C. 10082681537</p>
           </div>
         </div>
       </aside>

@@ -309,20 +309,21 @@ function performAutoBackup(userDataDir) {
       fs.mkdirSync(backupsDir, { recursive: true });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const destName = `electromecanica-auto-${today}.db`;
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    const destName = `electromecanica-auto-${stamp}.db`;
     const destPath = path.join(backupsDir, destName);
 
     fs.copyFileSync(dbPath, destPath);
 
-    // Rotación: conservar los últimos 7 respaldos diarios
+    // Rotación: conservar las últimas 14 copias fechadas
     const existing = fs
       .readdirSync(backupsDir)
       .filter((f) => f.startsWith('electromecanica-auto-') && f.endsWith('.db'))
       .sort();
 
-    if (existing.length > 7) {
-      const toRemove = existing.slice(0, existing.length - 7);
+    if (existing.length > 14) {
+      const toRemove = existing.slice(0, existing.length - 14);
       toRemove.forEach((f) => {
         try {
           fs.unlinkSync(path.join(backupsDir, f));

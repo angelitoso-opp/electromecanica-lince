@@ -10,7 +10,8 @@
     "lint": "eslint",
     "db:clean": "node prisma/seed.js",
     "db:demo": "node prisma/seed.js --demo",
-    "desktop:start": "electron .",
+    "desktop:start": "node scripts/desktop-start.mjs",
+    "test": "node --test tests/*.test.mjs",
     "desktop:build": "next build && node scripts/prepare-standalone.mjs && node scripts/build-exe.mjs"
   },
   "dependencies": {

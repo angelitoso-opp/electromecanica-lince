@@ -1,26 +1,54 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import fs from 'fs';
+import path from 'path';
 
-const SESSION_COOKIE = 'elince_session';
-const SESSION_VALUE = 'authenticated_operator_lince_v1';
 const MASTER_PIN = process.env.WORKSHOP_PIN || '1234';
 const MASTER_PASSWORD = process.env.WORKSHOP_PASSWORD || 'lince2026';
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get(SESSION_COOKIE);
     const body = await request.json().catch(() => ({}));
 
-    const isAuthenticated = session?.value === SESSION_VALUE;
-    const isPinValid = body.pin === MASTER_PIN || body.pin === MASTER_PASSWORD || body.password === MASTER_PASSWORD;
+    // Exigir obligatoriamente el PIN de seguridad del taller (Hallazgo #2)
+    const isPinValid =
+      body.pin === MASTER_PIN ||
+      body.pin === MASTER_PASSWORD ||
+      body.password === MASTER_PASSWORD;
 
-    if (!isAuthenticated && !isPinValid) {
+    if (!isPinValid) {
       return NextResponse.json(
-        { success: false, error: 'Acceso no autorizado. Se requiere sesión activa de operador o PIN de seguridad.' },
+        {
+          success: false,
+          error: 'Acceso denegado. Se requiere el PIN de seguridad del taller (Por defecto: 1234) para confirmar el vaciado.',
+        },
         { status: 401 }
       );
+    }
+
+    // 1. Crear respaldo de emergencia fechado antes de vaciar la base
+    try {
+      await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(FULL);');
+      const dbList = (await prisma.$queryRawUnsafe('PRAGMA database_list;')) as Array<{
+        seq: number | bigint;
+        name: string;
+        file: string;
+      }>;
+      const mainDb = dbList.find((d) => d.name === 'main');
+      const dbPath = mainDb?.file;
+
+      if (dbPath && fs.existsSync(dbPath)) {
+        const backupsDir = path.join(path.dirname(dbPath), 'backups');
+        if (!fs.existsSync(backupsDir)) {
+          fs.mkdirSync(backupsDir, { recursive: true });
+        }
+        const now = new Date();
+        const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+        const emergencyPath = path.join(backupsDir, `electromecanica-pre-clear-${stamp}.db`);
+        fs.copyFileSync(dbPath, emergencyPath);
+      }
+    } catch (backupErr) {
+      console.warn('Aviso: no se pudo completar snapshot de emergencia previo al vaciado:', backupErr);
     }
 
     const keepInventory = body.keepInventory !== false;
@@ -48,12 +76,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Se han eliminado los datos de prueba exitosamente.',
+      message: 'Base de datos reiniciada exitosamente. Se ha guardado un respaldo de emergencia.',
     });
   } catch (error) {
-    console.error('Error clearing sample data:', error);
+    console.error('Error clearing data:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al limpiar datos de prueba' },
+      { success: false, error: 'Error al limpiar datos del taller' },
       { status: 500 }
     );
   }

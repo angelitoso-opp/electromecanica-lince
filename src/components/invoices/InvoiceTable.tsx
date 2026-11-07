@@ -35,10 +35,11 @@ export function InvoiceTable({
     return matchSearch && matchType;
   });
 
-  const totalFacturado = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
-  const totalIgv = invoices.reduce((sum, i) => sum + (i.igv || 0), 0);
-  const facturasCount = invoices.filter((i) => i.type === 'FACTURA').length;
-  const boletasCount = invoices.filter((i) => i.type === 'BOLETA').length;
+  const activeInvoices = invoices.filter((i) => i.status !== 'ANULADA');
+  const totalFacturado = activeInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
+  const totalIgv = activeInvoices.reduce((sum, i) => sum + (i.igv || 0), 0);
+  const facturasCount = activeInvoices.filter((i) => i.type === 'FACTURA').length;
+  const boletasCount = activeInvoices.filter((i) => i.type === 'BOLETA').length;
 
   const handleShareWhatsApp = (e: React.MouseEvent, inv: any) => {
     e.stopPropagation();
@@ -80,14 +81,14 @@ export function InvoiceTable({
       const res = await fetch(`/api/invoices/${inv.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
-        toast.success('Comprobante eliminado', `Se eliminó el comprobante ${inv.invoiceNumber}`);
+        toast.success('Comprobante anulado', `Se anuló el comprobante ${inv.invoiceNumber}`);
         if (onRefresh) onRefresh();
       } else {
-        toast.error('Error', data.error || 'Error al eliminar comprobante');
+        toast.error('Error', data.error || 'Error al anular comprobante');
       }
     } catch (err) {
       console.error(err);
-      toast.error('Error de red', 'No se pudo conectar para eliminar comprobante');
+      toast.error('Error de red', 'No se pudo conectar para anular comprobante');
     }
   };
 
@@ -199,11 +200,16 @@ export function InvoiceTable({
                       </code>
                     </td>
                     <td>
-                      <span className={`pill ${isFactura ? 'info' : 'ok'}`}>
-                        {isFactura ? 'Factura' : 'Boleta'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`pill ${isFactura ? 'info' : 'ok'}`}>
+                          {isFactura ? 'Factura' : 'Boleta'}
+                        </span>
+                        {inv.status === 'ANULADA' && (
+                          <span className="pill danger text-[10px]">ANULADA</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="font-medium text-[var(--text)]">
+                    <td className={`font-medium text-[var(--text)] ${inv.status === 'ANULADA' ? 'line-through opacity-60' : ''}`}>
                       {inv.clientName}
                     </td>
                     <td>
@@ -213,7 +219,7 @@ export function InvoiceTable({
                       {formatDate(inv.issueDate || inv.createdAt)}
                     </td>
                     <td className="text-[var(--muted)]">{inv.paymentMethod}</td>
-                    <td className="num font-medium text-[var(--text)]">
+                    <td className={`num font-medium text-[var(--text)] ${inv.status === 'ANULADA' ? 'line-through opacity-60' : ''}`}>
                       {formatCurrency(inv.total)}
                     </td>
                     <td className="num" onClick={(e) => e.stopPropagation()}>
@@ -247,14 +253,16 @@ export function InvoiceTable({
                         >
                           <Share2 className="w-3.5 h-3.5 text-[var(--positive)]" />
                         </button>
-                        <ConfirmButton
-                          label=""
-                          confirmLabel="¿Borrar?"
-                          icon={<Trash2 className="w-3.5 h-3.5" />}
-                          onConfirm={() => handleDeleteInvoice(inv)}
-                          className="btn btn-danger px-2.5 h-7 text-[12px]"
-                          confirmClassName="btn danger px-2.5 h-7 text-[12px]"
-                        />
+                        {inv.status !== 'ANULADA' && (
+                          <ConfirmButton
+                            label=""
+                            confirmLabel="¿Anular?"
+                            icon={<Trash2 className="w-3.5 h-3.5" />}
+                            onConfirm={() => handleDeleteInvoice(inv)}
+                            className="btn btn-danger px-2.5 h-7 text-[12px]"
+                            confirmClassName="btn danger px-2.5 h-7 text-[12px]"
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

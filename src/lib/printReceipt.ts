@@ -1,5 +1,15 @@
 import { formatCurrency, formatDate, formatPlate } from './utils';
 
+export function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function printHtmlInIframe(html: string, suggestedFilename?: string) {
   // Guardar el título original de la pestaña/ventana principal
   const originalTitle = typeof document !== 'undefined' ? document.title : '';
@@ -61,7 +71,7 @@ function printHtmlInIframe(html: string, suggestedFilename?: string) {
 
 export function printInvoiceDocument(invoice: any) {
   const isFactura = invoice.type === 'FACTURA';
-  const docTitle = isFactura ? 'Factura Electrónica' : 'Boleta de Venta';
+  const docTitle = isFactura ? 'Factura de Venta' : 'Boleta de Venta';
   const docNumber = invoice.invoiceNumber || 'B001-0001';
   const clientName = invoice.clientName || 'Cliente';
   const clientDoc = invoice.clientDoc || 'S/R';
@@ -69,17 +79,17 @@ export function printInvoiceDocument(invoice: any) {
   const issueDate = formatDate(invoice.issueDate || invoice.createdAt || new Date());
   const paymentMethod = invoice.paymentMethod || 'EFECTIVO';
   const items = invoice.items || [];
-  const subtotal = Number(invoice.subtotal || 0);
-  const igv = Number(invoice.igv || 0);
   const total = Number(invoice.total || 0);
+  const subtotal = Number(invoice.subtotal || (total / 1.18).toFixed(2));
+  const igv = Number(invoice.igv || (total - subtotal).toFixed(2));
 
   const itemsRows = items
     .map(
       (item: any, idx: number) => `
       <tr>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${idx + 1}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 12px; font-weight: 600;">${item.quantity || 1}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">${item.description || ''}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 12px; font-weight: 600;">${Number(item.quantity) || 1}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">${escapeHtml(item.description || '')}</td>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums;">${formatCurrency(item.unitPrice || 0)}</td>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">${formatCurrency(item.subtotal || 0)}</td>
       </tr>
@@ -91,7 +101,7 @@ export function printInvoiceDocument(invoice: any) {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>${docTitle} - ${docNumber}</title>
+  <title>${escapeHtml(docTitle)} - ${escapeHtml(docNumber)}</title>
   <style>
     @page {
       size: A4 portrait;
@@ -103,8 +113,9 @@ export function printInvoiceDocument(invoice: any) {
       print-color-adjust: exact !important;
     }
     body {
-      margin: 0;
+      margin: 0 auto;
       padding: 0;
+      max-width: 800px;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: #111827;
       background: #ffffff;
@@ -120,18 +131,25 @@ export function printInvoiceDocument(invoice: any) {
       font-size: 20px;
       font-weight: 700;
       color: #111827;
-      margin: 0 0 4px 0;
+      margin: 0 0 2px 0;
       letter-spacing: -0.01em;
+    }
+    .company-owner {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0 0 3px 0;
+      letter-spacing: 0.02em;
     }
     .company-subtitle {
       font-size: 12px;
       color: #4b5563;
-      margin: 0 0 4px 0;
+      margin: 0 0 3px 0;
     }
     .company-meta {
       font-size: 11px;
       color: #6b7280;
-      margin: 0;
+      margin: 0 0 2px 0;
     }
     .ruc-box {
       border: 2px solid #111827;
@@ -139,7 +157,7 @@ export function printInvoiceDocument(invoice: any) {
       padding: 12px 16px;
       text-align: center;
       background: #fafafa;
-      width: 240px;
+      width: 250px;
     }
     .ruc-box .ruc-number {
       font-size: 13px;
@@ -157,7 +175,8 @@ export function printInvoiceDocument(invoice: any) {
     .ruc-box .doc-number {
       font-size: 15px;
       font-weight: 700;
-      font-variant-numeric: tabular-nums; font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      font-family: inherit;
       color: #111827;
     }
     .client-card {
@@ -231,25 +250,27 @@ export function printInvoiceDocument(invoice: any) {
       text-align: center;
       font-size: 11px;
       color: #6b7280;
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Header con datos oficiales SUNAT -->
   <table class="header-table">
     <tr>
       <td style="vertical-align: middle;">
         <h1 class="company-title">Electromecánica Lince</h1>
+        <p class="company-owner">PARIONA RAMIREZ TIMOTEO</p>
         <p class="company-subtitle">Diagnóstico Computarizado & Electromecánica Automotriz Integral</p>
         <p class="company-meta">Jr. Soledad 330, Lince, Lima - Perú · Teléfono: (01) 704-3157</p>
-        <p class="company-meta">Atención especializada en sistemas de inyección, arranque, alternadores y frenos</p>
+        <p class="company-meta">Actividad Económica: 4520 - Mantenimiento y Reparación de Vehículos Automotores</p>
       </td>
       <td style="width: 260px; text-align: right; vertical-align: middle;">
         <div class="ruc-box">
-          <div class="ruc-number">R.U.C. 20601234567</div>
-          <div class="doc-type">${docTitle}</div>
-          <div class="doc-number">${docNumber}</div>
+          <div class="ruc-number">R.U.C. 10082681537</div>
+          <div class="doc-type">${escapeHtml(docTitle)}</div>
+          <div class="doc-number">${escapeHtml(docNumber)}</div>
         </div>
       </td>
     </tr>
@@ -260,19 +281,19 @@ export function printInvoiceDocument(invoice: any) {
     <table class="client-grid">
       <tr>
         <td class="label">${isFactura ? 'Razón Social:' : 'Señor(a):'}</td>
-        <td style="font-weight: 600; color: #111827;">${clientName}</td>
+        <td style="font-weight: 600; color: #111827;">${escapeHtml(clientName)}</td>
         <td class="label">Fecha de Emisión:</td>
-        <td>${issueDate}</td>
+        <td>${escapeHtml(issueDate)}</td>
       </tr>
       <tr>
         <td class="label">${isFactura ? 'R.U.C.:' : 'DNI / Doc:'}</td>
-        <td style="font-variant-numeric: tabular-nums; font-family: inherit; font-weight: 600;">${clientDoc}</td>
+        <td style="font-variant-numeric: tabular-nums; font-family: inherit; font-weight: 600;">${escapeHtml(clientDoc)}</td>
         <td class="label">Medio de Pago:</td>
-        <td>${paymentMethod}</td>
+        <td>${escapeHtml(paymentMethod)}</td>
       </tr>
       ${
         clientAddress
-          ? `<tr><td class="label">Dirección:</td><td colspan="3">${clientAddress}</td></tr>`
+          ? `<tr><td class="label">Dirección:</td><td colspan="3">${escapeHtml(clientAddress)}</td></tr>`
           : ''
       }
     </table>
@@ -294,23 +315,17 @@ export function printInvoiceDocument(invoice: any) {
     </tbody>
   </table>
 
-  <!-- Totals -->
+  <!-- Totals con desglose fiscal legal -->
   <div class="totals-container">
     <div class="totals-box">
-      ${
-        isFactura
-          ? `
-        <div class="totals-row">
-          <span>Op. Gravada:</span>
-          <span style="font-variant-numeric: tabular-nums; font-family: inherit;">${formatCurrency(subtotal)}</span>
-        </div>
-        <div class="totals-row">
-          <span>I.G.V. (18%):</span>
-          <span style="font-variant-numeric: tabular-nums; font-family: inherit;">${formatCurrency(igv)}</span>
-        </div>
-      `
-          : ''
-      }
+      <div class="totals-row">
+        <span>Op. Gravada:</span>
+        <span style="font-variant-numeric: tabular-nums; font-family: inherit;">${formatCurrency(subtotal)}</span>
+      </div>
+      <div class="totals-row">
+        <span>I.G.V. (18%):</span>
+        <span style="font-variant-numeric: tabular-nums; font-family: inherit;">${formatCurrency(igv)}</span>
+      </div>
       <div class="totals-row grand-total">
         <span>IMPORTE TOTAL:</span>
         <span style="font-variant-numeric: tabular-nums; font-family: inherit;">${formatCurrency(total)}</span>
@@ -318,9 +333,10 @@ export function printInvoiceDocument(invoice: any) {
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- Footer transparente y conforme a ley -->
   <div class="footer-note">
-    <p style="margin: 0 0 4px 0;">Representación impresa del comprobante de pago electrónico.</p>
+    <p style="margin: 0 0 4px 0; font-weight: 600; color: #374151;">Documento de Control y Liquidación Interna de Servicio</p>
+    <p style="margin: 0 0 4px 0;">Emisión oficial de Comprobante de Pago generada en el Portal SUNAT · R.U.C. 10082681537</p>
     <p style="margin: 0; font-weight: 500;">¡Gracias por confiar en Electromecánica Lince! Garantía y confianza en cada servicio.</p>
   </div>
 
@@ -346,7 +362,7 @@ export function printWorkOrderDocument(order: any) {
     .map(
       (s: any) => `
       <tr>
-        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">${s.description}</td>
+        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">${escapeHtml(s.description)}</td>
         <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums;">${formatCurrency(s.cost || 0)}</td>
       </tr>
     `
@@ -357,10 +373,10 @@ export function printWorkOrderDocument(order: any) {
     .map(
       (i: any) => `
       <tr>
-        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 12px; font-weight: 600;">${i.quantity || 1}</td>
-        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">${i.description}</td>
+        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 12px; font-weight: 600;">${Number(i.quantity) || 1}</td>
+        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px;">${escapeHtml(i.description)}</td>
         <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums;">${formatCurrency(i.unitPrice || 0)}</td>
-        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">${formatCurrency((i.quantity || 1) * (i.unitPrice || 0))}</td>
+        <td style="padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">${formatCurrency((Number(i.quantity) || 1) * (Number(i.unitPrice) || 0))}</td>
       </tr>
     `
     )
@@ -370,7 +386,7 @@ export function printWorkOrderDocument(order: any) {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Orden de Trabajo ${orderNumber} - ${plate}</title>
+  <title>Orden de Trabajo ${escapeHtml(orderNumber)} - ${escapeHtml(plate)}</title>
   <style>
     @page {
       size: A4 portrait;
@@ -382,8 +398,9 @@ export function printWorkOrderDocument(order: any) {
       print-color-adjust: exact !important;
     }
     body {
-      margin: 0;
+      margin: 0 auto;
       padding: 0;
+      max-width: 800px;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: #111827;
       background: #ffffff;
@@ -399,7 +416,13 @@ export function printWorkOrderDocument(order: any) {
       font-size: 20px;
       font-weight: 700;
       color: #111827;
-      margin: 0 0 4px 0;
+      margin: 0 0 2px 0;
+    }
+    .company-owner {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0 0 3px 0;
     }
     .company-subtitle {
       font-size: 12px;
@@ -423,7 +446,8 @@ export function printWorkOrderDocument(order: any) {
     .order-box .order-num {
       font-size: 18px;
       font-weight: 700;
-      font-variant-numeric: tabular-nums; font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      font-family: inherit;
       color: #111827;
     }
     .info-grid {
@@ -514,18 +538,19 @@ export function printWorkOrderDocument(order: any) {
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Header con datos de Timoteo Pariona -->
   <table class="header-table">
     <tr>
       <td style="vertical-align: middle;">
         <h1 class="company-title">Electromecánica Lince</h1>
+        <p class="company-owner">PARIONA RAMIREZ TIMOTEO · R.U.C. 10082681537</p>
         <p class="company-subtitle">Jr. Soledad 330, Lince, Lima · Teléfono: (01) 704-3157</p>
         <p style="margin: 0; font-size: 11px; color: #6b7280;">Especialistas en Electricidad Automotriz, Inyección Electrónica y Diagnóstico OBD2</p>
       </td>
       <td style="width: 230px; text-align: right; vertical-align: middle;">
         <div class="order-box">
           <div class="order-tag">Orden de Trabajo</div>
-          <div class="order-num">${orderNumber}</div>
+          <div class="order-num">${escapeHtml(orderNumber)}</div>
         </div>
       </td>
     </tr>
@@ -535,39 +560,39 @@ export function printWorkOrderDocument(order: any) {
   <table class="info-grid">
     <tr>
       <td class="label">Placa Vehicular:</td>
-      <td style="font-weight: 700; font-variant-numeric: tabular-nums; font-family: inherit; font-size: 14px; color: #111827;">${plate}</td>
+      <td style="font-weight: 700; font-variant-numeric: tabular-nums; font-family: inherit; font-size: 14px; color: #111827;">${escapeHtml(plate)}</td>
       <td class="label">Fecha Ingreso:</td>
-      <td>${dateStr}</td>
+      <td>${escapeHtml(dateStr)}</td>
     </tr>
     <tr>
       <td class="label">Vehículo:</td>
-      <td style="font-weight: 600;">${vehicleDesc}</td>
+      <td style="font-weight: 600;">${escapeHtml(vehicleDesc)}</td>
       <td class="label">Kilometraje:</td>
       <td style="font-variant-numeric: tabular-nums; font-family: inherit;">${mileage ? `${Number(mileage).toLocaleString()} km` : 'No registrado'}</td>
     </tr>
     <tr>
       <td class="label">Titular / Cliente:</td>
-      <td style="font-weight: 600;">${clientName}</td>
+      <td style="font-weight: 600;">${escapeHtml(clientName)}</td>
       <td class="label">Teléfono:</td>
-      <td>${clientPhone || 'S/R'}</td>
+      <td>${escapeHtml(clientPhone || 'S/R')}</td>
     </tr>
     <tr>
       <td class="label">Técnico Asignado:</td>
-      <td>${technician}</td>
+      <td>${escapeHtml(technician)}</td>
       <td class="label">Estado Actual:</td>
-      <td style="font-weight: 600;">${statusStr}</td>
+      <td style="font-weight: 600;">${escapeHtml(statusStr)}</td>
     </tr>
   </table>
 
   <!-- Diagnóstico y Falla -->
   <div style="margin-bottom: 16px; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; background: #fff;">
     <div style="font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 3px;">Falla Reportada / Motivo de Ingreso:</div>
-    <div style="font-size: 12px; color: #111827; margin-bottom: 8px;">${order.issueDescription || 'Sin motivo especificado'}</div>
+    <div style="font-size: 12px; color: #111827; margin-bottom: 8px;">${escapeHtml(order.issueDescription || 'Sin motivo especificado')}</div>
     ${
       order.diagnostic
         ? `
       <div style="font-size: 11px; font-weight: 700; color: #1b6c80; text-transform: uppercase; margin-bottom: 3px; border-top: 1px dashed #e5e7eb; padding-top: 6px;">Diagnóstico del Mecánico:</div>
-      <div style="font-size: 12px; color: #111827;">${order.diagnostic}</div>
+      <div style="font-size: 12px; color: #111827;">${escapeHtml(order.diagnostic)}</div>
     `
         : ''
     }
@@ -637,7 +662,7 @@ export function printWorkOrderDocument(order: any) {
           : ''
       }
       <div class="totals-row grand-total">
-        <span>TOTAL NETO:</span>
+        <span>IMPORTE TOTAL:</span>
         <span style="font-variant-numeric: tabular-nums; font-family: inherit;">${formatCurrency(order.totalAmount || 0)}</span>
       </div>
     </div>
@@ -648,12 +673,12 @@ export function printWorkOrderDocument(order: any) {
     <tr>
       <td>
         <div class="sig-line"></div>
-        <div><strong>${technician}</strong></div>
+        <div><strong>${escapeHtml(technician)}</strong></div>
         <div style="font-size: 11px;">Jefe de Taller / Electromecánica Lince</div>
       </td>
       <td>
         <div class="sig-line"></div>
-        <div><strong>${clientName}</strong></div>
+        <div><strong>${escapeHtml(clientName)}</strong></div>
         <div style="font-size: 11px;">Conformidad del Cliente</div>
       </td>
     </tr>
