@@ -21,14 +21,14 @@ Sistema web y de escritorio **Local-First** de alto rendimiento diseñado a la m
    - Parser fonético de números cardinales en español (*"ochenta mil"* $\rightarrow$ `80000`, *"trescientos cincuenta"* $\rightarrow$ `350`).
    - Mapeo difuso contra un catálogo de más de 25 labores mecánicas y deducción automática de repuestos de almacén.
 
-3. **Facturación Electrónica y Comprobantes SUNAT:**
-   - Emisión formal de **Boletas de Venta** (`B001-XXXX`) y **Facturas Comerciales** (`F001-XXXX`).
-   - Desglose contable automático de Base Imponible y débito fiscal (IGV 18%).
-   - Plantilla de impresión profesional optimizada para hojas A4 y tickets térmicos de punto de venta (80 mm).
+3. **Liquidación y Comprobantes de Servicio:**
+   - Emisión de comprobantes de control interno y liquidación de servicios: **Boletas** (`B001-XXXX`) y **Facturas** (`F001-XXXX`).
+   - Desglose contable oficial de Base Imponible y débito fiscal (IGV 18%) conforme a normativa de SUNAT para liquidación y respaldo administrativo (R.U.C. 10082681537 - PARIONA RAMIREZ TIMOTEO).
+   - Generación y descarga directa en PDF con nombramiento inteligente de archivo (`B001-XXXX - Cliente`, `OT-XXXX - Placa - Cliente`).
 
-4. **Control de Almacén y Kardex de Repuestos:**
+4. **Control de Almacén y Repuestos:**
    - Control de existencias con SKU único, marca, ubicación de estante y costo vs. precio de venta.
-   - Alerta visual inmediata de reposición ante stock crítico (`stock <= minStock`).
+   - Validación estricta de stock antes de comprometer órdenes para evitar stock negativo.
    - Deducción transaccional automática de existencias al despachar repuestos en órdenes.
 
 5. **Directorio de Clientes y Carros (Relación 1 a N):**

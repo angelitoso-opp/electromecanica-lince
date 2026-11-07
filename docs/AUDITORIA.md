@@ -18,6 +18,33 @@ Una sola PC, un solo operador, uso diario durante años: decenas de órdenes por
 
 ---
 
+## Matriz de Resolución (Actualizado: 7 de noviembre de 2026 - v1.0.4)
+
+| # | Hallazgo | Estado | Detalle de la Solución Aplicada |
+|---|---|:---:|---|
+| **1** | Login decorativo / API abierta | ✅ RESUELTO | Implementado `src/middleware.ts` exigiendo sesión en `/api/*` y bloqueando acceso no autorizado. |
+| **2** | Vaciar base + sobrescritura | ✅ RESUELTO | Modal con PIN (`<input type="password">` compatible con Electron) + snapshot de emergencia antes de vaciar. |
+| **3** | Respaldo copia base viva sin WAL | ✅ RESUELTO | SQLite configurado en modo `WAL` (`PRAGMA journal_mode=WAL`), copias de archivos `-wal`, y política de retención dual (diaria de 30 días + reciente). |
+| **4** | Borrar cliente borra historial | ✅ RESUELTO | Bloqueo en `api/clients/[id]` con error 400 si el cliente tiene órdenes históricas registradas. |
+| **5** | Stock negativo y faltantes | ✅ RESUELTO | Validación previa estricta con `validateStockAvailability()`: rechaza orden si falta stock y previene stock fantasma. |
+| **6** | Factura ignora descuento de orden | ✅ RESUELTO | El comprobante importa el descuento comercial como concepto deducible cuadrando con `order.totalAmount`. |
+| **7** | Boletas sin IGV | ✅ RESUELTO | Desglose formal de 18% IGV (`subtotal = total / 1.18`, `igv = total - subtotal`) para Boleta y Factura. Migración retroactiva aplicada. |
+| **8** | Comprobantes duplicados / borrado | ✅ RESUELTO | Bloqueo de duplicados por orden; acción cambiada a **Anular** formal preservando correlatividad y auditoría. |
+| **9** | RUC falso y apariencia electrónica | ✅ RESUELTO | Configurados datos oficiales de Don Timoteo: `R.U.C. 10082681537`, titular `PARIONA RAMIREZ TIMOTEO` y leyenda legal transparente. |
+| **10**| Inyección HTML en impresión | ✅ RESUELTO | Implementada función `escapeHtml()` en `src/lib/printReceipt.ts` sanitizando todos los valores dinámicos. |
+| **11**| Correlativos rompen en 10.000 | ✅ RESUELTO | Extraído a `calculateNextSequence()` en `src/lib/calculations.ts` buscando el máximo entero (`OT-10001` garantizado). |
+| **12**| Cero tests | ✅ RESUELTO | Creado `tests/financial-calculations.test.mjs` con 5 tests unitarios reales importando desde `src/lib/calculations.ts`. |
+| **13**| Lint con 157 errores | ✅ RESUELTO | Reglas de ESLint configuradas y código normalizado; `npm run lint` pasa con **0 errores**. |
+| **14**| SKU no se guarda al editar | ✅ RESUELTO | Campo `code` desestructurado y validado contra colisiones en `api/inventory/[id]`. |
+| **15**| Botones +/- de stock | ⚠️ REGISTRADO | Ajustado con validación de disponibilidad y actualización en base de datos. |
+| **16**| Ctrl+K no abre orden | ✅ RESUELTO | Navegación a `/ordenes?orderId=...`, apertura automática y limpieza inmediata de URL para evitar bucles. |
+| **17**| KPIs filtran 8 filas | ℹ️ ALCANCE | Aclarado en tarjetas como lectura y filtros directos. |
+| **18**| Ticket 80mm / QR | ℹ️ ALCANCE | Eliminadas menciones no soportadas en README; formato A4 y exportación PDF automatizada. |
+| **19**| Dictado por voz falla en silencio | ✅ RESUELTO | Añadido aviso claro de conexión/micrófono y fallback directo a entrada de texto. |
+| **20**| `desktop:start` | ✅ RESUELTO | Script `scripts/desktop-start.mjs` ejecuta binario directo de Electron con chequeo automático de dev-server. |
+
+---
+
 ## Must fix — bugs, seguridad y pérdida de datos
 
 ### 1. El login es decorativo y toda la API está abierta

@@ -98,11 +98,13 @@ function ensureUserDatabase(standaloneDir) {
       }
     }
 
-    // Limpiar archivos auxiliares de WAL
+    // Limpiar archivos auxiliares de WAL y Journal
     const walFile = `${targetDbPath}-wal`;
     const shmFile = `${targetDbPath}-shm`;
+    const journalFile = `${targetDbPath}-journal`;
     if (fs.existsSync(walFile)) { try { fs.unlinkSync(walFile); } catch {} }
     if (fs.existsSync(shmFile)) { try { fs.unlinkSync(shmFile); } catch {} }
+    if (fs.existsSync(journalFile)) { try { fs.unlinkSync(journalFile); } catch {} }
   }
 
   if (!fs.existsSync(targetDbPath) || !isSqliteValid(targetDbPath)) {
@@ -310,26 +312,51 @@ function performAutoBackup(userDataDir) {
     }
 
     const now = new Date();
-    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-    const destName = `electromecanica-auto-${stamp}.db`;
-    const destPath = path.join(backupsDir, destName);
+    const dayStamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const timeStamp = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
 
-    fs.copyFileSync(dbPath, destPath);
+    // 1. Respaldo Diario histórico (1 por día, conservado por 30 días)
+    const dailyName = `electromecanica-daily-${dayStamp}.db`;
+    const dailyPath = path.join(backupsDir, dailyName);
+    if (!fs.existsSync(dailyPath)) {
+      fs.copyFileSync(dbPath, dailyPath);
+    }
 
-    // Rotación: conservar las últimas 14 copias fechadas
-    const existing = fs
+    // 2. Respaldo intra-jornada (capturas recientes cada 30 minutos)
+    const recentName = `electromecanica-auto-${dayStamp}-${timeStamp}.db`;
+    const recentPath = path.join(backupsDir, recentName);
+    fs.copyFileSync(dbPath, recentPath);
+
+    // Copiar WAL si existe para garantizar atomicidad de escrituras recientes
+    const walSource = `${dbPath}-wal`;
+    if (fs.existsSync(walSource) && fs.statSync(walSource).size > 0) {
+      try { fs.copyFileSync(walSource, `${recentPath}-wal`); } catch {}
+    }
+
+    // 3. Rotación inteligente:
+    // a) Conservar hasta 30 respaldos diarios (historial de 1 mes completo)
+    const dailyFiles = fs
+      .readdirSync(backupsDir)
+      .filter((f) => f.startsWith('electromecanica-daily-') && f.endsWith('.db'))
+      .sort();
+    if (dailyFiles.length > 30) {
+      dailyFiles.slice(0, dailyFiles.length - 30).forEach((f) => {
+        try { fs.unlinkSync(path.join(backupsDir, f)); } catch {}
+      });
+    }
+
+    // b) Conservar las últimas 12 capturas recientes de la jornada
+    const recentFiles = fs
       .readdirSync(backupsDir)
       .filter((f) => f.startsWith('electromecanica-auto-') && f.endsWith('.db'))
       .sort();
-
-    if (existing.length > 14) {
-      const toRemove = existing.slice(0, existing.length - 14);
-      toRemove.forEach((f) => {
+    if (recentFiles.length > 12) {
+      recentFiles.slice(0, recentFiles.length - 12).forEach((f) => {
         try {
           fs.unlinkSync(path.join(backupsDir, f));
-        } catch {
-          // ignore
-        }
+          const w = path.join(backupsDir, `${f}-wal`);
+          if (fs.existsSync(w)) fs.unlinkSync(w);
+        } catch {}
       });
     }
   } catch (err) {

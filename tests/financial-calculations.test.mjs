@@ -1,72 +1,55 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  calculateTaxBreakdown,
+  calculateOrderTotal,
+  calculateNextSequence,
+  validateStockAvailability,
+} from '../src/lib/calculations.ts';
 
 test('Cálculo financiero: Desglose de Base Imponible e IGV (18%) conforme a SUNAT', () => {
-  const total = 118.00;
-  const subtotal = +(total / 1.18).toFixed(2);
-  const igv = +(total - subtotal).toFixed(2);
+  const result = calculateTaxBreakdown(118.00);
 
-  assert.equal(subtotal, 100.00, 'La base imponible para S/ 118 debe ser exactamente S/ 100.00');
-  assert.equal(igv, 18.00, 'El IGV (18%) para S/ 118 debe ser exactamente S/ 18.00');
-  assert.equal(+(subtotal + igv).toFixed(2), total, 'La suma de base + IGV debe coincidir con el total');
+  assert.equal(result.subtotal, 100.00, 'La base imponible para S/ 118 debe ser exactamente S/ 100.00');
+  assert.equal(result.igv, 18.00, 'El IGV (18%) para S/ 118 debe ser exactamente S/ 18.00');
+  assert.equal(result.total, 118.00, 'El total debe mantenerse idéntico');
+  assert.equal(+(result.subtotal + result.igv).toFixed(2), result.total, 'Base + IGV debe sumar exactamente el total');
 });
 
-test('Cálculo financiero: Desglose con centavos no enteros', () => {
-  const total = 250.00;
-  const subtotal = +(total / 1.18).toFixed(2);
-  const igv = +(total - subtotal).toFixed(2);
+test('Cálculo financiero: Desglose con centavos fraccionarios (cuadre al centavo)', () => {
+  const result = calculateTaxBreakdown(250.00);
 
-  assert.equal(subtotal, 211.86, 'Subtotal redondeado a dos decimales');
-  assert.equal(igv, 38.14, 'IGV cuadrante');
-  assert.equal(+(subtotal + igv).toFixed(2), total, 'Subtotal + IGV cuadra el total');
+  assert.equal(result.subtotal, 211.86, 'Subtotal redondeado formalmente');
+  assert.equal(result.igv, 38.14, 'IGV cuadrante con base imponible');
+  assert.equal(+(result.subtotal + result.igv).toFixed(2), 250.00, 'La suma debe cuadrar exactamente S/ 250.00');
 });
 
-test('Cálculo financiero: Orden de trabajo con descuento preservado en comprobante', () => {
-  const laborTotal = 250.00;
-  const partsTotal = 400.00;
+test('Cálculo de orden de trabajo: Total con descuento comercial deducido', () => {
+  const labor = 250.00;
+  const parts = 400.00;
   const discount = 50.00;
-  const orderTotal = Math.max(0, laborTotal + partsTotal - discount);
+  const total = calculateOrderTotal(labor, parts, discount);
 
-  assert.equal(orderTotal, 600.00, 'Total de la orden con descuento aplicado debe ser 600.00');
-
-  // En el comprobante, los ítems importados reflejan el descuento
-  const invoiceItems = [
-    { description: 'Mantenimiento preventivo', quantity: 1, unitPrice: 250.00 },
-    { description: 'Kit de pastillas de freno', quantity: 1, unitPrice: 400.00 },
-    { description: 'Descuento comercial', quantity: 1, unitPrice: -50.00 },
-  ];
-
-  const invoiceTotal = invoiceItems.reduce(
-    (sum, item) => sum + item.quantity * item.unitPrice,
-    0
-  );
-
-  assert.equal(invoiceTotal, orderTotal, 'El total del comprobante debe ser exactamente igual al total de la orden con descuento');
+  assert.equal(total, 600.00, 'Mano de obra (250) + Repuestos (400) - Descuento (50) debe dar 600.00');
 });
 
-test('Seguridad de inventario: El stock nunca puede quedar negativo', () => {
-  const currentStock = 2;
-  const requestedQty = 5;
-  const updatedStock = Math.max(0, currentStock - requestedQty);
+test('Validación de inventario: Detección estricta de faltantes y stock suficiente', () => {
+  // Caso 1: Hay stock suficiente
+  const okCheck = validateStockAvailability(2, 5);
+  assert.equal(okCheck.valid, true);
+  assert.equal(okCheck.missing, 0);
 
-  assert.equal(updatedStock, 0, 'El stock resultante debe quedar en 0 y no en valor negativo (-3)');
+  // Caso 2: Stock insuficiente (evita decrementos a ciegas y stock fantasma en rollback)
+  const failCheck = validateStockAvailability(4, 1);
+  assert.equal(failCheck.valid, false);
+  assert.equal(failCheck.missing, 3, 'Deben faltar exactamente 3 unidades');
+  assert.equal(failCheck.available, 1);
+  assert.equal(failCheck.requested, 4);
 });
 
-test('Correlativo numérico: Supera 9,999 sin colisión por orden alfabético', () => {
-  const existingOrderNumbers = ['OT-0001', 'OT-0050', 'OT-9999', 'OT-10000'];
+test('Correlatividad segura: Supera el umbral alfanumérico de 9,999 sin colisión', () => {
+  const existingOrders = ['OT-0001', 'OT-0500', 'OT-9999', 'OT-10000'];
+  const next = calculateNextSequence(existingOrders, 'OT');
 
-  let maxNum = 0;
-  for (const ord of existingOrderNumbers) {
-    const match = ord.match(/\d+$/);
-    if (match) {
-      const n = parseInt(match[0], 10);
-      if (n > maxNum) maxNum = n;
-    }
-  }
-
-  const nextNum = maxNum + 1;
-  const nextOrderNumber = `OT-${String(nextNum).padStart(4, '0')}`;
-
-  assert.equal(maxNum, 10000, 'El número máximo detectado numéricamente debe ser 10000');
-  assert.equal(nextOrderNumber, 'OT-10001', 'El siguiente correlativo debe ser OT-10001 sin colisionar con OT-9999');
+  assert.equal(next, 'OT-10001', 'El siguiente correlativo a OT-10000 debe ser OT-10001 y no volver a OT-10000');
 });

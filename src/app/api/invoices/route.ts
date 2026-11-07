@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { calculateNextSequence, calculateTaxBreakdown } from '@/lib/calculations';
 
 export async function GET(request: Request) {
   try {
@@ -89,27 +90,20 @@ export async function POST(request: Request) {
       where: { type },
       select: { invoiceNumber: true },
     });
-    let maxNum = 0;
-    for (const inv of allInvoices) {
-      const match = inv.invoiceNumber.match(/\d+$/);
-      if (match) {
-        const n = parseInt(match[0], 10);
-        if (n > maxNum) maxNum = n;
-      }
-    }
-    const nextNum = maxNum + 1;
-    const invoiceNumber = `${prefix}-${String(nextNum).padStart(4, '0')}`;
+    const invoiceNumber = calculateNextSequence(
+      allInvoices.map((i) => i.invoiceNumber),
+      prefix
+    );
 
     // 3. Calcular montos
-    const total = items.reduce(
+    const rawTotal = items.reduce(
       (sum: number, item: any) =>
         sum + (parseInt(item.quantity) || 1) * (parseFloat(item.unitPrice) || 0),
       0
     );
 
     // 4. Desglose contable oficial de IGV (18%) conforme a normativa peruana (Hallazgo #7)
-    const subtotal = +(total / 1.18).toFixed(2);
-    const igv = +(total - subtotal).toFixed(2);
+    const { subtotal, igv, total } = calculateTaxBreakdown(rawTotal);
 
     const invoice = await prisma.invoice.create({
       data: {

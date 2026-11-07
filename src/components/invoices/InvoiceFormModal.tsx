@@ -28,13 +28,7 @@ export function InvoiceFormModal({
   const [orders, setOrders] = useState<any[]>([]);
   const [items, setItems] = useState<
     { description: string; quantity: number; unitPrice: number }[]
-  >([
-    {
-      description: 'Mantenimiento preventivo general',
-      quantity: 1,
-      unitPrice: 120,
-    },
-  ]);
+  >([]);
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');

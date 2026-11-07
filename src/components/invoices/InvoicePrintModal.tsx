@@ -50,15 +50,15 @@ export function InvoicePrintModal({
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Comprobante eliminado', `Se eliminó el comprobante ${invoice.invoiceNumber}`);
+        toast.success('Comprobante anulado', `Se anuló formalmente el comprobante ${invoice.invoiceNumber}`);
         if (onDelete) onDelete();
         onClose();
       } else {
-        toast.error('Error', data.error || 'Error al eliminar comprobante');
+        toast.error('Error', data.error || 'Error al anular comprobante');
       }
     } catch (err) {
       console.error(err);
-      toast.error('Error de conexión', 'No se pudo conectar para eliminar');
+      toast.error('Error de conexión', 'No se pudo conectar para anular el comprobante');
     }
   };
 
@@ -67,12 +67,12 @@ export function InvoicePrintModal({
   };
 
   const handleSendWhatsApp = () => {
-    let text = `*COMPROBANTE DE PAGO ELECTRONICO*\n`;
-    text += `*ELECTROMECANICA LINCE*\n`;
+    let text = `*LIQUIDACION DE SERVICIO - ELECTROMECANICA LINCE*\n`;
+    text += `*PARIONA RAMIREZ TIMOTEO · R.U.C. 10082681537*\n`;
     text += `Jr. Soledad 330, Lince · Tel: (01) 704-3157\n`;
     text += `------------------------------------\n`;
     text += `*${
-      invoice.type === 'FACTURA' ? 'Factura Electronica' : 'Boleta de Venta'
+      invoice.type === 'FACTURA' ? 'Factura de Venta' : 'Boleta de Venta'
     }:* ${invoice.invoiceNumber}\n`;
     text += `Cliente: *${invoice.clientName}*\n`;
     text += `Doc / RUC: ${invoice.clientDoc}\n`;
@@ -147,13 +147,16 @@ export function InvoicePrintModal({
             >
               <Printer className="w-4 h-4" />
             </button>
-            <ConfirmButton
-              label="Eliminar"
-              confirmLabel="¿Borrar?"
-              icon={<Trash2 className="w-3.5 h-3.5" />}
-              onConfirm={handleDelete}
-              className="btn btn-danger px-2 text-[12px]"
-            />
+            {invoice.status !== 'ANULADA' && (
+              <ConfirmButton
+                label="Anular"
+                confirmLabel="¿Confirmar anulación?"
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+                onConfirm={handleDelete}
+                className="btn btn-danger px-2 text-[12px]"
+                confirmClassName="btn danger px-2 text-[12px]"
+              />
+            )}
             <button onClick={onClose} className="btn px-2.5 ml-1" aria-label="Cerrar panel">
               <X className="w-4 h-4" />
             </button>
@@ -279,7 +282,7 @@ export function InvoicePrintModal({
 
           <div className="pt-4 border-t border-[var(--border)] text-center text-[11px] text-[var(--muted)] space-y-0.5">
             <p className="font-semibold text-[var(--text)]">Documento de Control y Liquidación Interna de Servicio</p>
-            <p>Emisión oficial de Comprobante de Pago generada en el Portal SUNAT · R.U.C. 10082681537</p>
+            <p>Control de garantía de taller. No sustituye al Comprobante emitido en el Portal SUNAT SOL · R.U.C. 10082681537</p>
           </div>
         </div>
       </aside>

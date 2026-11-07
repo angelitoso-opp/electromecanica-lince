@@ -336,7 +336,7 @@ export function printInvoiceDocument(invoice: any) {
   <!-- Footer transparente y conforme a ley -->
   <div class="footer-note">
     <p style="margin: 0 0 4px 0; font-weight: 600; color: #374151;">Documento de Control y Liquidación Interna de Servicio</p>
-    <p style="margin: 0 0 4px 0;">Emisión oficial de Comprobante de Pago generada en el Portal SUNAT · R.U.C. 10082681537</p>
+    <p style="margin: 0 0 4px 0;">Control administrativo y de garantía técnica de taller. No sustituye al Comprobante de Pago Electrónico (Boleta/Factura) emitido formalmente por el titular en el Portal SUNAT SOL · R.U.C. 10082681537</p>
     <p style="margin: 0; font-weight: 500;">¡Gracias por confiar en Electromecánica Lince! Garantía y confianza en cada servicio.</p>
   </div>
 

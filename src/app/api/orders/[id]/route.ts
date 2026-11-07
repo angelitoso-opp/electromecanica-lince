@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { calculateOrderTotal, validateStockAvailability } from '@/lib/calculations';
 
 export async function GET(
   request: Request,
@@ -94,6 +95,30 @@ export async function PUT(
       }
 
       if (items && Array.isArray(items)) {
+        // Validar disponibilidad de repuestos antes de modificar la orden (Punto 3 de auditoría)
+        for (const newItem of items) {
+          if (newItem.inventoryItemId) {
+            const newQty = parseInt(newItem.quantity) || 1;
+            const oldItem = currentOrder.items.find(
+              (oi: any) => oi.inventoryItemId === newItem.inventoryItemId
+            );
+            const oldQty = oldItem ? oldItem.quantity : 0;
+            const inv = await tx.inventoryItem.findUnique({
+              where: { id: newItem.inventoryItemId },
+              select: { name: true, stock: true },
+            });
+            if (inv) {
+              const effectiveAvailable = inv.stock + oldQty;
+              const stockCheck = validateStockAvailability(newQty, effectiveAvailable);
+              if (!stockCheck.valid) {
+                throw new Error(
+                  `Stock insuficiente para "${inv.name}". Disponible: ${stockCheck.available}, Solicitado: ${stockCheck.requested} (Faltan ${stockCheck.missing} unidades).`
+                );
+              }
+            }
+          }
+        }
+
         // 1. Revertir el stock de los repuestos previamente asignados a esta orden
         for (const oldItem of currentOrder.items) {
           if (oldItem.inventoryItemId) {
@@ -126,21 +151,15 @@ export async function PUT(
           }),
         });
 
-        // 3. Descontar el nuevo stock de los repuestos asignados sin permitir negativos (Hallazgo #5)
+        // 3. Descontar el nuevo stock de los repuestos asignados
         for (const newItem of items) {
           if (newItem.inventoryItemId) {
             const qty = parseInt(newItem.quantity) || 1;
             try {
-              const inv = await tx.inventoryItem.findUnique({
+              await tx.inventoryItem.update({
                 where: { id: newItem.inventoryItemId },
-                select: { stock: true },
+                data: { stock: { decrement: qty } },
               });
-              if (inv) {
-                await tx.inventoryItem.update({
-                  where: { id: newItem.inventoryItemId },
-                  data: { stock: Math.max(0, inv.stock - qty) },
-                });
-              }
             } catch {
               // El repuesto no existe en inventario
             }
@@ -155,7 +174,7 @@ export async function PUT(
       }
 
       const disc = discount !== undefined ? parseFloat(discount) || 0 : currentOrder.discount;
-      const totalAmount = Math.max(0, laborTotal + partsTotal - disc);
+      const totalAmount = calculateOrderTotal(laborTotal, partsTotal, disc);
 
       const parsedMileage =
         mileageAtService !== undefined

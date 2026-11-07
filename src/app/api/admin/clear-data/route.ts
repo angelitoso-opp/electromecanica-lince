@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Acceso denegado. Se requiere el PIN de seguridad del taller (Por defecto: 1234) para confirmar el vaciado.',
+          error: 'Acceso denegado. PIN de seguridad incorrecto.',
         },
         { status: 401 }
       );

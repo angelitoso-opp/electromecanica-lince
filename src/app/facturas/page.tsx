@@ -32,8 +32,9 @@ export default function InvoicesPage() {
     fetchInvoices();
   }, []);
 
-  const totalBilled = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
-  const totalIgv = invoices.reduce((sum, i) => sum + Number(i.igv || 0), 0);
+  const activeInvoices = invoices.filter((i) => i.status !== 'ANULADA');
+  const totalBilled = activeInvoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
+  const totalIgv = activeInvoices.reduce((sum, i) => sum + Number(i.igv || 0), 0);
 
   return (
     <div className="space-y-5">
@@ -44,7 +45,7 @@ export default function InvoicesPage() {
           <p className="text-[13px] text-[var(--muted)]">
             {loading
               ? 'Cargando registro de comprobantes emitidos...'
-              : `${invoices.length} comprobantes emitidos · ${formatCurrency(
+              : `${invoices.length} comprobantes (${activeInvoices.length} activos) · ${formatCurrency(
                   totalBilled
                 )} facturado total · ${formatCurrency(
                   totalIgv

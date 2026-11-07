@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { OrderKanban } from '@/components/orders/OrderKanban';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderFormModal } from '@/components/orders/OrderFormModal';
 import { VoiceAssistantModal } from '@/components/voice/VoiceAssistantModal';
 import { Plus, Mic } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 
 function OrdersContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const openedOrderIdRef = useRef<string | null>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -46,12 +48,16 @@ function OrdersContent() {
 
     const targetOrderId = searchParams.get('orderId') || searchParams.get('order');
     if (targetOrderId && orders.length > 0) {
-      const match = orders.find((o) => o.id === targetOrderId || o.orderNumber === targetOrderId);
-      if (match) {
-        setSelectedOrder(match);
+      if (openedOrderIdRef.current !== targetOrderId) {
+        const match = orders.find((o) => o.id === targetOrderId || o.orderNumber === targetOrderId);
+        if (match) {
+          openedOrderIdRef.current = targetOrderId;
+          setSelectedOrder(match);
+          router.replace('/ordenes');
+        }
       }
     }
-  }, [searchParams, orders]);
+  }, [searchParams, orders, router]);
 
   const handleEditOrder = (order: any) => {
     setSelectedOrder(null);
@@ -118,10 +124,14 @@ function OrdersContent() {
         <OrderDetailModal
           order={selectedOrder}
           isOpen={!!selectedOrder}
-          onClose={() => setSelectedOrder(null)}
+          onClose={() => {
+            setSelectedOrder(null);
+            openedOrderIdRef.current = null;
+          }}
           onOrderUpdated={() => {
             fetchOrders();
             setSelectedOrder(null);
+            openedOrderIdRef.current = null;
           }}
           onEditOrder={handleEditOrder}
         />

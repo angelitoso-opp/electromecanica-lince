@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  calculateNextSequence,
+  calculateOrderTotal,
+  validateStockAvailability,
+} from '@/lib/calculations';
 
 // Listar órdenes de trabajo con filtros (estado, placa, cliente)
 export async function GET(request: Request) {
@@ -76,20 +81,37 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validar existencias de repuestos antes de comprometer la orden (Punto 3 de auditoría)
+    for (const item of items) {
+      if (item.inventoryItemId) {
+        const qty = parseInt(item.quantity) || 1;
+        const invItem = await prisma.inventoryItem.findUnique({
+          where: { id: item.inventoryItemId },
+          select: { name: true, stock: true },
+        });
+        if (invItem) {
+          const stockCheck = validateStockAvailability(qty, invItem.stock);
+          if (!stockCheck.valid) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: `Stock insuficiente para "${invItem.name}". Disponible en almacén: ${stockCheck.available}, Solicitado: ${stockCheck.requested} (Faltan ${stockCheck.missing} unidades). Ajuste la cantidad o registre el ingreso del repuesto.`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    }
+
     // Generar código correlativo de orden de forma segura superando 9,999 (Hallazgo #11)
     const allOrders = await prisma.workOrder.findMany({
       select: { orderNumber: true },
     });
-    let maxNum = 0;
-    for (const ord of allOrders) {
-      const match = ord.orderNumber.match(/\d+$/);
-      if (match) {
-        const n = parseInt(match[0], 10);
-        if (n > maxNum) maxNum = n;
-      }
-    }
-    const nextNum = maxNum + 1;
-    const orderNumber = `OT-${String(nextNum).padStart(4, '0')}`;
+    const orderNumber = calculateNextSequence(
+      allOrders.map((o) => o.orderNumber),
+      'OT'
+    );
 
     // Calcular subtotales
     const laborTotal = services.reduce(
@@ -103,7 +125,11 @@ export async function POST(request: Request) {
       0
     );
 
-    const totalAmount = Math.max(0, laborTotal + partsTotal - (parseFloat(discount) || 0));
+    const totalAmount = calculateOrderTotal(
+      laborTotal,
+      partsTotal,
+      parseFloat(discount) || 0
+    );
 
     // Crear la orden en una transacción y descontar stock si corresponde
     const newOrder = await prisma.$transaction(async (tx) => {
@@ -162,22 +188,18 @@ export async function POST(request: Request) {
         },
       });
 
-      // 2. Descontar del inventario protegiendo contra stock negativo (Hallazgo #5)
+      // 2. Descontar del inventario con disponibilidad validada previamente
       for (const item of items) {
         if (item.inventoryItemId) {
           const qty = parseInt(item.quantity) || 1;
-          const invItem = await tx.inventoryItem.findUnique({
+          await tx.inventoryItem.update({
             where: { id: item.inventoryItemId },
-            select: { stock: true },
-          });
-          if (invItem) {
-            await tx.inventoryItem.update({
-              where: { id: item.inventoryItemId },
-              data: {
-                stock: Math.max(0, invItem.stock - qty),
+            data: {
+              stock: {
+                decrement: qty,
               },
-            });
-          }
+            },
+          });
         }
       }
 

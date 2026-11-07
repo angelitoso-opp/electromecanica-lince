@@ -7,7 +7,7 @@ import { LowStockAlert } from '@/components/dashboard/LowStockAlert';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderFormModal } from '@/components/orders/OrderFormModal';
 import { VoiceAssistantModal } from '@/components/voice/VoiceAssistantModal';
-import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
+import { useToast } from '@/components/ui/ToastProvider';
 import { Mic, Plus, RotateCcw } from 'lucide-react';
 import { formatCurrency, formatPlate } from '@/lib/utils';
 
@@ -28,6 +28,10 @@ export default function DashboardPage() {
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [kpiFilter, setKpiFilter] = useState<KpiFilterType>('TODOS');
   const [hoveredOrder, setHoveredOrder] = useState<any | null>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [isClearing, setIsClearing] = useState(false);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -48,31 +52,37 @@ export default function DashboardPage() {
     fetchStats();
   }, []);
 
-  const handleClearSampleData = async () => {
-    const pin = window.prompt(
-      'ADVERTENCIA: Esta acción vaciará las órdenes, clientes y vehículos registrados.\n\nPara confirmar, ingrese el PIN de seguridad del taller (Por defecto: 1234):'
-    );
-    if (!pin) return;
-
+  const handleConfirmClear = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pinInput.trim()) {
+      setPinError('Debe ingresar el PIN');
+      return;
+    }
+    setIsClearing(true);
+    setPinError('');
     try {
       const res = await fetch('/api/admin/clear-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, keepInventory: false }),
+        body: JSON.stringify({ pin: pinInput.trim(), keepInventory: false }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success(
           'Base local reiniciada',
-          'Se guardó un respaldo de emergencia y se han vaciado los registros locales.'
+          'Se guardó un respaldo previo y se han vaciado los registros locales.'
         );
+        setShowPinModal(false);
+        setPinInput('');
         fetchStats();
       } else {
-        toast.error('Acceso denegado', data.error || 'PIN incorrecto');
+        setPinError(data.error || 'PIN incorrecto');
       }
     } catch (err) {
       console.error(err);
-      toast.error('Error de conexión', 'No se pudo contactar con el servidor');
+      setPinError('Error de conexión al servidor');
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -131,14 +141,15 @@ export default function DashboardPage() {
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           {(stats?.totalClients > 0 || stats?.inventoryCount > 0 || rawRecentOrders.length > 0) && (
-            <ConfirmButton
-              label="Vaciar base"
-              confirmLabel="¿Confirmar vaciado?"
-              icon={<RotateCcw className="w-3.5 h-3.5" />}
-              onConfirm={handleClearSampleData}
+            <button
+              type="button"
+              onClick={() => { setShowPinModal(true); setPinInput(''); setPinError(''); }}
               className="btn btn-danger"
-              confirmClassName="btn danger"
-            />
+              title="Vaciar base de datos local"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Vaciar base</span>
+            </button>
           )}
 
           <button onClick={() => setVoiceModalOpen(true)} className="btn">
@@ -468,6 +479,60 @@ export default function DashboardPage() {
         isOpen={voiceModalOpen}
         onClose={() => setVoiceModalOpen(false)}
       />
+
+      {/* Modal Seguro de Confirmación con PIN (Compatible con Electron) */}
+      {showPinModal && (
+        <div className="modal-backdrop" style={{ zIndex: 100 }}>
+          <div className="modal-card max-w-sm w-full mx-4">
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+              <h3 className="text-[14px] font-semibold text-[var(--text)]">Reiniciar Base de Datos Local</h3>
+              <button
+                type="button"
+                onClick={() => { setShowPinModal(false); setPinInput(''); setPinError(''); }}
+                className="btn px-2 h-7"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleConfirmClear} className="p-4 space-y-4">
+              <p className="text-[12px] text-[var(--muted)] leading-relaxed">
+                Esta acción vaciará las órdenes, clientes y vehículos registrados. Se creará automáticamente un respaldo de seguridad fechado antes de proceder.
+              </p>
+              <div>
+                <label className="text-[11px] font-semibold uppercase text-[var(--muted)] block mb-1.5">
+                  PIN de seguridad del taller
+                </label>
+                <input
+                  type="password"
+                  value={pinInput}
+                  onChange={(e) => { setPinInput(e.target.value); setPinError(''); }}
+                  placeholder="Ingrese PIN de taller"
+                  className="input w-full"
+                  autoFocus
+                />
+                {pinError && <p className="text-[11px] text-[var(--negative)] mt-1.5 font-medium">{pinError}</p>}
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => { setShowPinModal(false); setPinInput(''); setPinError(''); }}
+                  className="btn"
+                  disabled={isClearing}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isClearing || !pinInput.trim()}
+                  className="btn btn-danger"
+                >
+                  {isClearing ? 'Vaciando...' : 'Confirmar Vaciado'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
