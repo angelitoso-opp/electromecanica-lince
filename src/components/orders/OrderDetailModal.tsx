@@ -8,6 +8,7 @@ import {
   Send,
   Trash2,
   Edit2,
+  FileDown,
 } from 'lucide-react';
 import {
   formatCurrency,
@@ -237,14 +238,23 @@ export function OrderDetailModal({
                 <span className="hidden sm:inline">Editar</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="btn btn-primary"
+              title="Descargar orden de trabajo en PDF con nombre automático"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span>Descargar PDF</span>
+            </button>
             <button onClick={handleSendWhatsApp} className="btn" title="Compartir por WhatsApp">
               <Share2 className="w-3.5 h-3.5 text-[var(--positive)]" />
-              <span className="hidden sm:inline">WhatsApp</span>
+              <span className="hidden md:inline">WhatsApp</span>
             </button>
             <button
               onClick={handlePrint}
               className="btn px-2.5"
-              title="Imprimir orden"
+              title="Imprimir en impresora física o PDF"
             >
               <Printer className="w-4 h-4" />
             </button>
@@ -378,7 +388,7 @@ export function OrderDetailModal({
           {order.services?.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-[13px]">Mano de obra y servicios</h3>
-              <div className="border border-[var(--border)] rounded-[var(--r-md)] overflow-hidden">
+              <div className="border border-[var(--border)] rounded-[var(--r-md)] overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -405,7 +415,7 @@ export function OrderDetailModal({
           {order.items?.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-[13px]">Repuestos e insumos</h3>
-              <div className="border border-[var(--border)] rounded-[var(--r-md)] overflow-hidden">
+              <div className="border border-[var(--border)] rounded-[var(--r-md)] overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { X, Printer, Share2, Trash2 } from 'lucide-react';
+import { X, Printer, Share2, Trash2, FileDown } from 'lucide-react';
 import { formatCurrency, formatDate, formatWhatsAppPhone } from '@/lib/utils';
 import { printInvoiceDocument } from '@/lib/printReceipt';
 import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
@@ -127,14 +127,23 @@ export function InvoicePrintModal({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="btn btn-primary"
+              title="Descargar comprobante en PDF con nombre automático"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span>Descargar PDF</span>
+            </button>
             <button onClick={handleSendWhatsApp} className="btn" title="Enviar por WhatsApp">
               <Share2 className="w-3.5 h-3.5 text-[var(--positive)]" />
-              <span className="hidden sm:inline">WhatsApp</span>
+              <span className="hidden md:inline">WhatsApp</span>
             </button>
             <button
               onClick={handlePrint}
               className="btn px-2.5"
-              title="Imprimir comprobante"
+              title="Imprimir en impresora física o PDF"
             >
               <Printer className="w-4 h-4" />
             </button>
@@ -220,7 +229,7 @@ export function InvoicePrintModal({
           </div>
 
           {/* Table Items */}
-          <div className="rounded-[var(--r-md)] border border-[var(--border)] overflow-hidden">
+          <div className="rounded-[var(--r-md)] border border-[var(--border)] overflow-x-auto">
             <table className="data-table">
               <thead>
                 <tr>

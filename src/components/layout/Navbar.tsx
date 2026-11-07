@@ -3,6 +3,7 @@
 import React from 'react';
 import { Mic, Menu, Search } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { ScaleControl } from './ScaleControl';
 
 interface NavbarProps {
   onOpenMobileMenu?: () => void;
@@ -69,6 +70,9 @@ export function Navbar({
         </button>
 
         <span className="pill ok hidden lg:inline-flex">Turno abierto · 4 bahías</span>
+
+        {/* Modificador de tamaño para accesibilidad / taller */}
+        <ScaleControl />
 
         <button
           onClick={onOpenVoiceAssistant}

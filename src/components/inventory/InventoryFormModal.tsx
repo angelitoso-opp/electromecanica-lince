@@ -341,7 +341,7 @@ export function InventoryFormModal({
             </div>
           </div>
 
-          <div className="pt-3 flex items-center justify-between gap-2 border-t border-[var(--rule)]">
+          <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 bg-[var(--surface)] border-t border-[var(--rule)] flex items-center justify-between gap-2 z-10">
             {itemToEdit ? (
               <ConfirmButton
                 label="Eliminar repuesto"

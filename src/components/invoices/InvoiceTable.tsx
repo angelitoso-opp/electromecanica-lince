@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Share2, Eye, Trash2 } from 'lucide-react';
+import { Search, Share2, Eye, Trash2, FileDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast, ConfirmButton } from '@/components/ui/ToastProvider';
+import { printInvoiceDocument } from '@/lib/printReceipt';
 
 interface InvoiceTableProps {
   invoices: any[];
@@ -221,10 +222,22 @@ export function InvoiceTable({
                           type="button"
                           onClick={() => onSelectInvoice(inv)}
                           className="btn px-2.5 h-7 text-[12px]"
-                          title="Ver e imprimir comprobante"
+                          title="Ver detalle del comprobante"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Ver</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            printInvoiceDocument(inv);
+                          }}
+                          className="btn px-2 h-7 text-[12px]"
+                          title="Descargar comprobante en PDF"
+                        >
+                          <FileDown className="w-3.5 h-3.5 text-[var(--accent)]" />
+                          <span className="hidden xl:inline">PDF</span>
                         </button>
                         <button
                           type="button"

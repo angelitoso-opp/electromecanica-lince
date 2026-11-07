@@ -71,10 +71,13 @@ fs.copyFileSync(
   path.join(resourcesAppDir, 'electron', 'main.js')
 );
 
+const pkgData = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8'));
+const currentVersion = pkgData.version || '1.0.3';
+
 const appPkg = {
   name: 'electromecanica-lince',
   productName: 'Electromecánica Lince',
-  version: '1.0.2',
+  version: currentVersion,
   description: 'Sistema de Gestión Automotriz - Electromecánica Lince',
   main: 'electron/main.js',
   author: 'Electromecánica Lince (Jr. Soledad 330, Lince)',
@@ -121,7 +124,7 @@ namespace ElectromecanicaLinceLauncher
 {
     static class Program
     {
-        private const string RUNTIME_VERSION = "v1.0.2";
+        private const string RUNTIME_VERSION = "v${currentVersion}";
         private const string MAGIC = "ELINCE01";
 
         [STAThread]
@@ -130,6 +133,7 @@ namespace ElectromecanicaLinceLauncher
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            string selfPath = Process.GetCurrentProcess().MainModule.FileName;
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string baseDir = Path.Combine(localAppData, "ElectromecanicaLince");
             string runtimeDir = Path.Combine(baseDir, "runtime-" + RUNTIME_VERSION);
@@ -143,6 +147,8 @@ namespace ElectromecanicaLinceLauncher
                     return;
                 }
             }
+
+            PromptDesktopShortcutIfNeeded(selfPath, coreExePath);
 
             try
             {
@@ -161,6 +167,59 @@ namespace ElectromecanicaLinceLauncher
                     MessageBoxIcon.Error
                 );
             }
+        }
+
+        private static void PromptDesktopShortcutIfNeeded(string selfPath, string coreExePath)
+        {
+            try
+            {
+                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string linkPath = Path.Combine(desktopPath, "Electromecánica Lince.lnk");
+                if (!File.Exists(linkPath))
+                {
+                    DialogResult dr = MessageBox.Show(
+                        "¿Desea crear un acceso directo en el Escritorio para acceder fácilmente a Electromecánica Lince?",
+                        "Acceso directo en el Escritorio",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+                    if (dr == DialogResult.Yes)
+                    {
+                        CreateDesktopShortcut(selfPath, coreExePath, linkPath);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static void CreateDesktopShortcut(string exePath, string iconPath, string linkPath)
+        {
+            try
+            {
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType != null)
+                {
+                    object shell = Activator.CreateInstance(shellType);
+                    object shortcut = shellType.InvokeMember(
+                        "CreateShortcut",
+                        System.Reflection.BindingFlags.InvokeMethod,
+                        null,
+                        shell,
+                        new object[] { linkPath }
+                    );
+
+                    Type scType = shortcut.GetType();
+                    scType.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { exePath });
+                    scType.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(exePath) });
+                    if (File.Exists(iconPath))
+                    {
+                        scType.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { iconPath + ",0" });
+                    }
+                    scType.InvokeMember("Description", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { "Electromecánica Lince · Sistema Automotriz" });
+                    scType.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, null);
+                }
+            }
+            catch { }
         }
 
         private static bool ExtractEmbeddedRuntime(string baseDir, string runtimeDir)
@@ -255,6 +314,19 @@ namespace ElectromecanicaLinceLauncher
                     ZipFile.ExtractToDirectory(tempZip, runtimeDir);
 
                     try { File.Delete(tempZip); } catch { }
+
+                    // Limpiar versiones anteriores de runtime para ahorrar espacio en disco
+                    try
+                    {
+                        foreach (string oldDir in Directory.GetDirectories(baseDir, "runtime-*"))
+                        {
+                            if (!string.Equals(oldDir, runtimeDir, StringComparison.OrdinalIgnoreCase))
+                            {
+                                try { Directory.Delete(oldDir, true); } catch { }
+                            }
+                        }
+                    }
+                    catch { }
                 }
                 catch (Exception ex)
                 {

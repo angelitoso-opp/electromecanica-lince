@@ -382,7 +382,7 @@ export function ClientFormModal({
             </div>
           )}
 
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--rule)]">
+          <div className="sticky bottom-0 bg-[var(--surface)] -mx-5 px-5 py-3 flex items-center justify-end gap-2 border-t border-[var(--border)] z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
             <button type="button" onClick={onClose} className="btn">
               Cancelar
             </button>

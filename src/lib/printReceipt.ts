@@ -1,6 +1,15 @@
 import { formatCurrency, formatDate, formatPlate } from './utils';
 
-function printHtmlInIframe(html: string) {
+function printHtmlInIframe(html: string, suggestedFilename?: string) {
+  // Guardar el título original de la pestaña/ventana principal
+  const originalTitle = typeof document !== 'undefined' ? document.title : '';
+
+  if (suggestedFilename && typeof document !== 'undefined') {
+    // Sanitizar caracteres inválidos en sistemas de archivos de Windows (/ \ : * ? " < > |)
+    const cleanName = suggestedFilename.replace(/[\\/:*?"<>|]/g, '-').trim();
+    document.title = cleanName;
+  }
+
   // Eliminar iframes de impresión previos si existieran
   const existing = document.getElementById('electromecanica-print-frame');
   if (existing) {
@@ -21,6 +30,9 @@ function printHtmlInIframe(html: string) {
   const doc = iframe.contentWindow?.document;
   if (!doc) {
     window.print();
+    if (originalTitle && typeof document !== 'undefined') {
+      document.title = originalTitle;
+    }
     return;
   }
 
@@ -36,6 +48,13 @@ function printHtmlInIframe(html: string) {
     } catch (err) {
       console.error('Error al imprimir mediante iframe aislado:', err);
       window.print();
+    } finally {
+      // Restaurar el título original una vez cerrado o procesado el diálogo
+      setTimeout(() => {
+        if (originalTitle && typeof document !== 'undefined') {
+          document.title = originalTitle;
+        }
+      }, 2500);
     }
   }, 250);
 }
@@ -308,7 +327,8 @@ export function printInvoiceDocument(invoice: any) {
 </body>
 </html>`;
 
-  printHtmlInIframe(html);
+  const suggestedFilename = `${docNumber} - ${clientName} - Electromecanica Lince`;
+  printHtmlInIframe(html, suggestedFilename);
 }
 
 export function printWorkOrderDocument(order: any) {
@@ -642,5 +662,10 @@ export function printWorkOrderDocument(order: any) {
 </body>
 </html>`;
 
-  printHtmlInIframe(html);
+  const parts = [orderNumber];
+  if (plate) parts.push(plate);
+  if (clientName && clientName !== 'Cliente') parts.push(clientName);
+  parts.push('Electromecanica Lince');
+  const suggestedFilename = parts.join(' - ');
+  printHtmlInIframe(html, suggestedFilename);
 }

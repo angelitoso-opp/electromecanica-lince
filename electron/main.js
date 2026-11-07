@@ -55,6 +55,21 @@ function waitForServer(url, timeoutMs = 25000) {
   });
 }
 
+function isSqliteValid(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const stat = fs.statSync(filePath);
+    if (stat.size < 4096) return false;
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(16);
+    fs.readSync(fd, buf, 0, 16, 0);
+    fs.closeSync(fd);
+    return buf.toString('ascii', 0, 15).startsWith('SQLite format 3');
+  } catch {
+    return false;
+  }
+}
+
 function ensureUserDatabase(standaloneDir) {
   const userDataDir = app.getPath('userData');
   if (!fs.existsSync(userDataDir)) {
@@ -62,7 +77,35 @@ function ensureUserDatabase(standaloneDir) {
   }
 
   const targetDbPath = path.join(userDataDir, 'electromecanica.db');
-  if (!fs.existsSync(targetDbPath)) {
+  // Boot Guard: Si el archivo existe pero está corrupto (ej. corte de luz o apagón violento)
+  if (fs.existsSync(targetDbPath) && !isSqliteValid(targetDbPath)) {
+    console.error('🚨 [Boot Guard]: Archivo de base de datos dañado. Iniciando auto-recuperación...');
+    const quarantinePath = path.join(userDataDir, `corrupted-${Date.now()}.db`);
+    try { fs.copyFileSync(targetDbPath, quarantinePath); } catch {}
+
+    // Buscar el backup más reciente e íntegro
+    const backupsDir = path.join(userDataDir, 'backups');
+    if (fs.existsSync(backupsDir)) {
+      const candidates = fs.readdirSync(backupsDir)
+        .filter((f) => f.endsWith('.db'))
+        .map((f) => path.join(backupsDir, f))
+        .filter((f) => isSqliteValid(f))
+        .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+
+      if (candidates.length > 0) {
+        fs.copyFileSync(candidates[0], targetDbPath);
+        console.log(`✨ [Boot Guard]: Base recuperada automáticamente desde: ${path.basename(candidates[0])}`);
+      }
+    }
+
+    // Limpiar archivos auxiliares de WAL
+    const walFile = `${targetDbPath}-wal`;
+    const shmFile = `${targetDbPath}-shm`;
+    if (fs.existsSync(walFile)) { try { fs.unlinkSync(walFile); } catch {} }
+    if (fs.existsSync(shmFile)) { try { fs.unlinkSync(shmFile); } catch {} }
+  }
+
+  if (!fs.existsSync(targetDbPath) || !isSqliteValid(targetDbPath)) {
     const templateCandidates = [
       path.join(standaloneDir, 'prisma', 'clean.db'),
       path.join(standaloneDir, 'prisma', 'dev.db'),
@@ -70,7 +113,7 @@ function ensureUserDatabase(standaloneDir) {
       path.join(__dirname, '..', 'prisma', 'dev.db'),
     ];
     for (const candidate of templateCandidates) {
-      if (fs.existsSync(candidate)) {
+      if (fs.existsSync(candidate) && isSqliteValid(candidate)) {
         fs.copyFileSync(candidate, targetDbPath);
         break;
       }
@@ -257,7 +300,7 @@ app.whenReady().then(createWindow);
 function performAutoBackup(userDataDir) {
   try {
     const dbPath = path.join(userDataDir, 'electromecanica.db');
-    if (!fs.existsSync(dbPath)) return;
+    if (!fs.existsSync(dbPath) || !isSqliteValid(dbPath)) return;
     const stats = fs.statSync(dbPath);
     if (stats.size < 4096) return;
 
@@ -292,6 +335,13 @@ function performAutoBackup(userDataDir) {
     console.error('Error al generar respaldo automático:', err);
   }
 }
+
+// Respaldo continuo en segundo plano cada 30 minutos mientras la app está abierta
+setInterval(() => {
+  try {
+    performAutoBackup(app.getPath('userData'));
+  } catch {}
+}, 30 * 60 * 1000);
 
 app.on('window-all-closed', () => {
   try { performAutoBackup(app.getPath('userData')); } catch {}

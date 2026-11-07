@@ -798,8 +798,8 @@ export function OrderFormModal({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-2">
+          {/* Footer Sticky para evitar scroll forzado en pantallas ampliadas */}
+          <div className="sticky bottom-0 bg-[var(--surface)] border-t border-[var(--border)] pt-3 pb-1 -mx-5 px-5 z-10 flex items-center justify-end gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
             <button type="button" onClick={onClose} className="btn">
               Cancelar
             </button>

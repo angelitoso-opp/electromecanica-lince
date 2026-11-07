@@ -31,6 +31,22 @@ export default function RootLayout({
 
   return (
     <html lang="es" className={fontVariables} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var s = localStorage.getItem('elince_ui_scale');
+                if (s) {
+                  var v = Math.min(1.30, Math.max(0.90, parseFloat(s) / 100));
+                  document.documentElement.style.setProperty('--ui-scale', v.toFixed(2));
+                  document.documentElement.setAttribute('data-ui-scale', s);
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning>
         <AppShell>{children}</AppShell>
       </body>

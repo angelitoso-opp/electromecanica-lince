@@ -286,7 +286,7 @@ export function VehicleFormModal({
             />
           </div>
 
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--rule)]">
+          <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 bg-[var(--surface)] border-t border-[var(--rule)] flex items-center justify-end gap-2 z-10">
             <button type="button" onClick={onClose} className="btn">
               Cancelar
             </button>

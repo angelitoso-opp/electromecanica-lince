@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, Search, Eye, Edit2 } from 'lucide-react';
+import { Share2, Search, Eye, Edit2, FileDown } from 'lucide-react';
 import {
   formatCurrency,
   formatPlate,
   formatShortDate,
   generateWhatsAppQuoteUrl,
 } from '@/lib/utils';
+import { printWorkOrderDocument } from '@/lib/printReceipt';
 
 interface OrderKanbanProps {
   orders: any[];
@@ -278,6 +279,18 @@ export function OrderKanban({
                           </button>
                           <button
                             type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              printWorkOrderDocument(order);
+                            }}
+                            className="btn px-2 h-7 text-[12px]"
+                            title="Descargar PDF de la orden"
+                          >
+                            <FileDown className="w-3.5 h-3.5 text-[var(--accent)]" />
+                            <span className="hidden xl:inline">PDF</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={(e) => handleShareWhatsApp(e, order)}
                             className="btn px-2.5 h-7 text-[12px]"
                             title="Enviar proforma por WhatsApp"
@@ -303,7 +316,7 @@ export function OrderKanban({
         </section>
       ) : (
         /* KANBAN BOARD VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 items-start">
           {COLUMNS.map((col) => {
             const colOrders = filteredOrders.filter((o) => o.status === col.id);
 
@@ -339,6 +352,17 @@ export function OrderKanban({
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              printWorkOrderDocument(order);
+                            }}
+                            className="text-[var(--muted)] hover:text-[var(--accent)] p-1"
+                            title="Descargar PDF de la orden"
+                          >
+                            <FileDown className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             type="button"
                             onClick={(e) => handleShareWhatsApp(e, order)}
