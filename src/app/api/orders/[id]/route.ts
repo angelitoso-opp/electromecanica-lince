@@ -95,26 +95,45 @@ export async function PUT(
       }
 
       if (items && Array.isArray(items)) {
-        // Validar disponibilidad de repuestos antes de modificar la orden (Punto 3 de auditoría)
-        for (const newItem of items) {
-          if (newItem.inventoryItemId) {
-            const newQty = parseInt(newItem.quantity) || 1;
-            const oldItem = currentOrder.items.find(
-              (oi: any) => oi.inventoryItemId === newItem.inventoryItemId
+        // Mapear cantidades previas de la orden actual agrupadas por repuesto
+        const oldItemQuantities = new Map<string, number>();
+        for (const oi of currentOrder.items) {
+          if (oi.inventoryItemId) {
+            oldItemQuantities.set(
+              oi.inventoryItemId,
+              (oldItemQuantities.get(oi.inventoryItemId) || 0) + (oi.quantity || 1)
             );
-            const oldQty = oldItem ? oldItem.quantity : 0;
-            const inv = await tx.inventoryItem.findUnique({
-              where: { id: newItem.inventoryItemId },
-              select: { name: true, stock: true },
-            });
-            if (inv) {
-              const effectiveAvailable = inv.stock + oldQty;
-              const stockCheck = validateStockAvailability(newQty, effectiveAvailable);
-              if (!stockCheck.valid) {
-                throw new Error(
-                  `Stock insuficiente para "${inv.name}". Disponible: ${stockCheck.available}, Solicitado: ${stockCheck.requested} (Faltan ${stockCheck.missing} unidades).`
-                );
-              }
+          }
+        }
+
+        // Mapear y acumular cantidades solicitadas agrupadas por repuesto para evitar bypass multilínea
+        const newItemQuantities = new Map<string, number>();
+        for (const ni of items) {
+          if (ni.inventoryItemId) {
+            const qty = parseInt(ni.quantity) || 1;
+            newItemQuantities.set(
+              ni.inventoryItemId,
+              (newItemQuantities.get(ni.inventoryItemId) || 0) + qty
+            );
+          }
+        }
+
+        // Validar disponibilidad de repuestos antes de modificar la orden (Puntos 3 y 5 de auditoría)
+        for (const [invId, totalNewQty] of newItemQuantities.entries()) {
+          const oldQty = oldItemQuantities.get(invId) || 0;
+          const inv = await tx.inventoryItem.findUnique({
+            where: { id: invId },
+            select: { name: true, stock: true },
+          });
+          if (inv) {
+            const effectiveAvailable = inv.stock + oldQty;
+            const stockCheck = validateStockAvailability(totalNewQty, effectiveAvailable);
+            if (!stockCheck.valid) {
+              const err = new Error(
+                `Stock insuficiente para "${inv.name}". Disponible: ${stockCheck.available}, Solicitado: ${stockCheck.requested} (Faltan ${stockCheck.missing} unidades).`
+              );
+              (err as any).statusCode = 400;
+              throw err;
             }
           }
         }
@@ -218,11 +237,17 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true, order: updatedOrder });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating work order:', error);
+    const errorMessage = error?.message || 'Error al actualizar orden';
+    const statusCode =
+      error?.statusCode ||
+      (typeof errorMessage === 'string' && errorMessage.startsWith('Stock insuficiente')
+        ? 400
+        : 500);
     return NextResponse.json(
-      { success: false, error: 'Error al actualizar orden' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     );
   }
 }

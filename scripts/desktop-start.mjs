@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { createRequire } from 'module';
 import http from 'http';
 
@@ -6,6 +6,25 @@ const require = createRequire(import.meta.url);
 const electronBinary = require('electron');
 
 process.env.ELECTRON_DEV = '1';
+
+function killProcessTree(pid) {
+  if (!pid) return;
+  if (process.platform === 'win32') {
+    try {
+      execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
+    } catch {
+      // Proceso ya terminado o no encontrado
+    }
+  } else {
+    try {
+      process.kill(-pid, 'SIGTERM');
+    } catch {
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch {}
+    }
+  }
+}
 
 function checkDevServer() {
   return new Promise((resolve) => {
@@ -23,6 +42,26 @@ function checkDevServer() {
 async function start() {
   const isServerRunning = await checkDevServer();
   let devProcess = null;
+
+  const cleanup = () => {
+    if (devProcess && devProcess.pid) {
+      console.log('🛑 Cerrando subprocesos del servidor de desarrollo...');
+      killProcessTree(devProcess.pid);
+      devProcess = null;
+    }
+  };
+
+  process.on('SIGINT', () => {
+    cleanup();
+    process.exit(0);
+  });
+  process.on('SIGTERM', () => {
+    cleanup();
+    process.exit(0);
+  });
+  process.on('exit', () => {
+    cleanup();
+  });
 
   if (!isServerRunning) {
     console.log('⚡ Servidor de desarrollo Next.js no detectado en el puerto 3000. Iniciando "next dev"...');
@@ -66,11 +105,7 @@ async function start() {
   });
 
   child.on('exit', (code) => {
-    if (devProcess) {
-      try {
-        devProcess.kill();
-      } catch {}
-    }
+    cleanup();
     process.exit(code || 0);
   });
 }

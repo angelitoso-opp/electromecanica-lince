@@ -1,19 +1,16 @@
 /**
  * Funciones puras de cálculo financiero, inventario y correlatividad
  * Compartidas entre las rutas de API, componentes y pruebas unitarias.
+ * Compatible nativamente con Node.js 20+ y TypeScript/Next.js.
  */
-
-export interface TaxBreakdown {
-  subtotal: number;
-  igv: number;
-  total: number;
-}
 
 /**
  * Desglosa la Base Imponible y el IGV (18%) conforme a la normativa tributaria peruana.
  * subtotal + igv = total con precisión de dos decimales.
+ * @param {number} total
+ * @returns {{ subtotal: number, igv: number, total: number }}
  */
-export function calculateTaxBreakdown(total: number): TaxBreakdown {
+export function calculateTaxBreakdown(total) {
   const safeTotal = Math.max(0, Number(total) || 0);
   const subtotal = Number((safeTotal / 1.18).toFixed(2));
   const igv = Number((safeTotal - subtotal).toFixed(2));
@@ -27,12 +24,12 @@ export function calculateTaxBreakdown(total: number): TaxBreakdown {
 /**
  * Calcula el importe total de una orden de trabajo aplicando mano de obra,
  * repuestos y deducción de descuento comercial acordado.
+ * @param {number} laborTotal
+ * @param {number} partsTotal
+ * @param {number} discount
+ * @returns {number}
  */
-export function calculateOrderTotal(
-  laborTotal: number,
-  partsTotal: number,
-  discount: number
-): number {
+export function calculateOrderTotal(laborTotal, partsTotal, discount) {
   const labor = Math.max(0, Number(laborTotal) || 0);
   const parts = Math.max(0, Number(partsTotal) || 0);
   const disc = Math.max(0, Number(discount) || 0);
@@ -43,11 +40,11 @@ export function calculateOrderTotal(
 /**
  * Genera el siguiente código correlativo numérico a partir de los registros existentes.
  * Evita colisiones de ordenamiento alfabético cuando la numeración supera 9,999 (ej. OT-10000).
+ * @param {string[]} existingCodes
+ * @param {string} prefix
+ * @returns {string}
  */
-export function calculateNextSequence(
-  existingCodes: string[],
-  prefix: string
-): string {
+export function calculateNextSequence(existingCodes, prefix) {
   let maxNum = 0;
   for (const code of existingCodes) {
     if (!code) continue;
@@ -66,16 +63,11 @@ export function calculateNextSequence(
 /**
  * Valida la disponibilidad de stock en almacén para un repuesto.
  * Si no hay suficientes existencias, indica cuántas unidades faltan.
+ * @param {number} requestedQty
+ * @param {number} availableStock
+ * @returns {{ valid: boolean, missing: number, available: number, requested: number }}
  */
-export function validateStockAvailability(
-  requestedQty: number,
-  availableStock: number
-): {
-  valid: boolean;
-  missing: number;
-  available: number;
-  requested: number;
-} {
+export function validateStockAvailability(requestedQty, availableStock) {
   const req = Math.max(0, Math.floor(Number(requestedQty) || 0));
   const avail = Math.max(0, Math.floor(Number(availableStock) || 0));
   const valid = avail >= req;

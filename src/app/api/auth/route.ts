@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createSessionToken, verifySessionToken } from '@/lib/authCrypto';
 
 const SESSION_COOKIE = 'elince_session';
-const SESSION_VALUE = 'authenticated_operator_lince_v1';
 
 // Credenciales únicas a medida para Electromecánica Lince
 const ALLOWED_USERS = [
@@ -24,7 +24,7 @@ const OPERATOR_PROFILE = {
 export async function GET() {
   const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE);
-  const authenticated = session?.value === SESSION_VALUE;
+  const authenticated = await verifySessionToken(session?.value);
 
   return NextResponse.json({
     success: true,
@@ -52,8 +52,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const token = await createSessionToken(rawUser);
+
     const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE, SESSION_VALUE, {
+    cookieStore.set(SESSION_COOKIE, token, {
       httpOnly: true,
       path: '/',
       sameSite: 'lax',

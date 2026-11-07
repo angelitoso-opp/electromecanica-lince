@@ -320,6 +320,10 @@ function performAutoBackup(userDataDir) {
     const dailyPath = path.join(backupsDir, dailyName);
     if (!fs.existsSync(dailyPath)) {
       fs.copyFileSync(dbPath, dailyPath);
+      const walSource = `${dbPath}-wal`;
+      if (fs.existsSync(walSource) && fs.statSync(walSource).size > 0) {
+        try { fs.copyFileSync(walSource, `${dailyPath}-wal`); } catch {}
+      }
     }
 
     // 2. Respaldo intra-jornada (capturas recientes cada 30 minutos)

@@ -7,8 +7,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
-    // 1. Forzar volcado atómico del archivo WAL al archivo principal de SQLite
-    await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(FULL);');
+    // 1. Forzar volcado y truncado atómico del archivo WAL al archivo principal de SQLite
+    await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);');
 
     // 2. Obtener la ruta real del archivo SQLite activo
     const dbList = (await prisma.$queryRawUnsafe('PRAGMA database_list;')) as Array<{
@@ -54,12 +54,22 @@ export async function GET(request: Request) {
       });
     }
 
-    // Descarga directa del archivo .db
-    const fileBuffer = fs.readFileSync(dbPath);
+    // 3. Generar respaldo íntegro e inmutable mediante SQLite VACUUM INTO
+    let fileBuffer: Buffer;
+    const tempBackupPath = `${dbPath}.vacuum-${Date.now()}.db`;
+    try {
+      await prisma.$queryRawUnsafe(`VACUUM INTO '${tempBackupPath.replace(/'/g, "''")}';`);
+      fileBuffer = fs.readFileSync(tempBackupPath);
+      try { fs.unlinkSync(tempBackupPath); } catch {}
+    } catch (vacuumErr) {
+      console.warn('Fallo VACUUM INTO, recurriendo a lectura directa tras checkpoint:', vacuumErr);
+      fileBuffer = fs.readFileSync(dbPath);
+    }
+
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
     const filename = `electromecanica-lince-backup-${dateStr}.db`;
 
-    return new Response(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/x-sqlite3',

@@ -5,7 +5,7 @@ import {
   calculateOrderTotal,
   calculateNextSequence,
   validateStockAvailability,
-} from '../src/lib/calculations.ts';
+} from '../src/lib/calculations.js';
 
 test('Cálculo financiero: Desglose de Base Imponible e IGV (18%) conforme a SUNAT', () => {
   const result = calculateTaxBreakdown(118.00);

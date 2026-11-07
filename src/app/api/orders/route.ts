@@ -81,25 +81,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validar existencias de repuestos antes de comprometer la orden (Punto 3 de auditoría)
+    // Validar existencias de repuestos agrupadas por ID antes de comprometer la orden (Punto 3 y 5 de auditoría)
+    const requestedInventoryQuantities = new Map<string, number>();
     for (const item of items) {
       if (item.inventoryItemId) {
         const qty = parseInt(item.quantity) || 1;
-        const invItem = await prisma.inventoryItem.findUnique({
-          where: { id: item.inventoryItemId },
-          select: { name: true, stock: true },
-        });
-        if (invItem) {
-          const stockCheck = validateStockAvailability(qty, invItem.stock);
-          if (!stockCheck.valid) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: `Stock insuficiente para "${invItem.name}". Disponible en almacén: ${stockCheck.available}, Solicitado: ${stockCheck.requested} (Faltan ${stockCheck.missing} unidades). Ajuste la cantidad o registre el ingreso del repuesto.`,
-              },
-              { status: 400 }
-            );
-          }
+        requestedInventoryQuantities.set(
+          item.inventoryItemId,
+          (requestedInventoryQuantities.get(item.inventoryItemId) || 0) + qty
+        );
+      }
+    }
+
+    for (const [inventoryItemId, totalRequestedQty] of requestedInventoryQuantities.entries()) {
+      const invItem = await prisma.inventoryItem.findUnique({
+        where: { id: inventoryItemId },
+        select: { name: true, stock: true },
+      });
+      if (invItem) {
+        const stockCheck = validateStockAvailability(totalRequestedQty, invItem.stock);
+        if (!stockCheck.valid) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Stock insuficiente para "${invItem.name}". Disponible en almacén: ${stockCheck.available}, Solicitado: ${stockCheck.requested} (Faltan ${stockCheck.missing} unidades). Ajuste la cantidad o registre el ingreso del repuesto.`,
+            },
+            { status: 400 }
+          );
         }
       }
     }
